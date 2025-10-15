@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Rheo.Extensions.Hosting.Argument;
+using Rheo.Extensions.Hosting.Commandline;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Rheo.Extensions.Hosting.Activation

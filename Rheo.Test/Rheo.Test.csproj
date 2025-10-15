@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Rheo.Extensions.Hosting\Rheo.Extensions.Hosting.csproj" />
     <ProjectReference Include="..\Rheo.Storage\Rheo.Storage.csproj" />
   </ItemGroup>
 

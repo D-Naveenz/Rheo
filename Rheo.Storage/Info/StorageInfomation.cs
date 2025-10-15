@@ -117,9 +117,8 @@ namespace Rheo.Storage.Info
         /// <returns>An <see cref="nint"/> that can be used to access the retrieved information. Returns <see
         /// langword="IntPtr.Zero"/> if the operation fails.</returns>
         [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-        [return: MarshalAs(UnmanagedType.SysInt)]
         private static extern nint SHGetFileInfo(
-            [MarshalAs(UnmanagedType.LPWStr)] string pszPath,
+            string pszPath,
             uint dwFileAttributes,
             out SHFILEINFO psfi,
             uint cbFileInfo,

@@ -4,11 +4,26 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Authors>Naveen Dharmathunga</Authors>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/D-Naveenz/Rheo</RepositoryUrl>
+    <Copyright>Copyright (c) 2025 Naveen Dharmathunga, All rights reserved.</Copyright>
+    <Description>Rheo.Storage is a modern, high-performance library for managing files and directories with rich metadata, asynchronous operations, and progress reporting.</Description>
+    <Version>0.1.2-beta.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Mime-Detective" Version="25.8.1" />
     <PackageReference Include="Mime-Detective.Definitions.Condensed" Version="25.8.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
