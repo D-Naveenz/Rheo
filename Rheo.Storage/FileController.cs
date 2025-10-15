@@ -4,17 +4,36 @@ using System.Diagnostics;
 namespace Rheo.Storage
 {
     /// <summary>
-    /// Represents a file stored in the system, providing methods for file operations such as copying, moving, renaming,
-    /// and deleting.
+    /// Provides functionality for managing and manipulating files, including operations such as copying, moving,
+    /// renaming, and deleting files.
     /// </summary>
-    /// <remarks>This class extends <see cref="StorageController{T}"/> to provide file-specific functionality,
-    /// including retrieving file metadata, checking availability, and performing asynchronous file operations. It
-    /// supports progress reporting and cancellation for long-running tasks.</remarks>
-    /// <param name="fileNameOrPath"></param>
-    /// <param name="isInfoRequired"></param>
-    public class FileController(string fileNameOrPath, bool isInfoRequired = true) : 
-        StorageController<FileInfomation>(fileNameOrPath, isInfoRequired, AssertAs.File)
+    /// <remarks>The <see cref="FileController"/> class extends <see cref="StorageController"/> and implements
+    /// <see cref="IStorageInfoContainer{T}"/>  to provide detailed file information and advanced file management
+    /// capabilities. It supports asynchronous operations for file manipulation  and provides properties to access
+    /// metadata such as creation time, file attributes, and MIME type. <para> This class is designed to handle both
+    /// binary and non-binary files and includes mechanisms to retrieve file-specific information  through the <see
+    /// cref="Information"/> property. It also ensures thread-safe operations and supports progress reporting for
+    /// long-running tasks. </para></remarks>
+    public class FileController : StorageController, IStorageInfoContainer<FileInfomation>
     {
+        private readonly FileInfomation? _storageInfo;
+
+        public FileController(string fileNameOrPath, bool isInfoRequired = true) : base(fileNameOrPath, AssertAs.File)
+        {
+            // Initialize storage information if required
+            try
+            {
+                if (isInfoRequired)
+                {
+                    _storageInfo = Activator.CreateInstance(typeof(FileInfomation), FullPath) as FileInfomation;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Could not create an instance of type {typeof(FileInfomation).FullName}.", ex);
+            }
+        }
+
         public override DateTime CreatedAt => File.GetCreationTime(FullPath);
 
         /// <inheritdoc cref="FileInfomation.Extension"/>
@@ -27,6 +46,23 @@ namespace Rheo.Storage
         /// </summary>
         public bool? IsBinary => Information.IsBinaryFile();
 
+        public FileInfomation Information => _storageInfo ?? throw new InvalidOperationException("Storage information is not available.");
+
+        public string ContentType => Information.MimeType;
+
+        public string? DisplayName => Information.DisplayName;
+
+        public string? DisplayType => Information.TypeName;
+
+        public bool IsReadOnly => Information.AttributeFlags.HasFlag(FileAttributes.ReadOnly);
+
+        public bool IsHidden => Information.AttributeFlags.HasFlag(FileAttributes.Hidden);
+
+        public bool IsSystem => Information.AttributeFlags.HasFlag(FileAttributes.System);
+
+        public bool IsTemporary => Information.AttributeFlags.HasFlag(FileAttributes.Temporary);
+
+        #region Methods
         public override async Task CopyAsync(
             string destination,
             bool overwrite = false,
@@ -194,5 +230,6 @@ namespace Rheo.Storage
             if (!overwrite && File.Exists(destination))
                 throw new IOException("File already exists.");
         }
+        #endregion
     }
 }

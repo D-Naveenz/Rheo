@@ -8,7 +8,7 @@ public static class StoragePaths
     /// Gets the root name of the assembly.
     /// </summary>
     public static string AssemblyRootName =>
-        Assembly.GetExecutingAssembly().GetName().Name?.Split('.').First() ?? "LatexIconsBuilder";
+        Assembly.GetExecutingAssembly().GetName().Name?.Split('.').First() ?? "Rheo.Storage";
 
     /// <summary>
     /// Gets the default local application data path for the assembly.

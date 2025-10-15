@@ -1,27 +1,20 @@
-﻿using Rheo.Storage.Info;
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
+﻿using System.Text;
 
 namespace Rheo.Storage
 {
     /// <summary>
-    /// Represents an abstract base class for managing storage entities, such as files or directories,  with support for
-    /// additional storage information and asynchronous operations.
+    /// Represents an abstract base class for managing storage resources, such as files or directories.
     /// </summary>
-    /// <remarks>The <see cref="StorageController{T}"/> class provides a framework for managing storage entities, 
-    /// including operations such as copying, moving, renaming, and deleting. It also supports retrieving  metadata such
-    /// as size, content type, and display information. Derived classes must implement  abstract members to provide
-    /// specific behavior for storage management.</remarks>
-    /// <typeparam name="T">The type of storage information associated with the storage entity. This type must derive from  <see
-    /// cref="StorageInfomation"/> and have a public constructor.</typeparam>
-    public abstract class StorageController<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T> where T : StorageInfomation
+    /// <remarks>The <see cref="StorageController"/> class provides a foundation for working with storage
+    /// resources,  including properties for accessing metadata (e.g., name, size, creation date) and methods for
+    /// performing  common operations such as copying, moving, renaming, and deleting resources.  Derived classes must
+    /// implement abstract members to provide specific behavior for the storage type.</remarks>
+    public abstract class StorageController
     {
         private const int MIN_BUFFER_SIZE = 1024; // 1KB
         private const int MAX_BUFFER_SIZE = 16 * 1024 * 1024; // 16MB
 
-        protected readonly T? _storageInfo;
-
-        public StorageController(string fileNameOrPath, bool isInfoRequired, AssertAs assert)
+        public StorageController(string fileNameOrPath, AssertAs assert)
         {
             fileNameOrPath = VerifyPath(fileNameOrPath, assert);
 
@@ -34,24 +27,14 @@ namespace Rheo.Storage
             {
                 Directory.CreateDirectory(ParentDirectory);
             }
-
-            // Initialize storage information if required
-            try
-            {
-                if (isInfoRequired)
-                {
-                    _storageInfo = Activator.CreateInstance(typeof(T), FullPath) as T;
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Could not create an instance of type {typeof(T).FullName}.", ex);
-            }
         }
 
         #region Properties
         public string Name { get; protected set; }
 
+        /// <summary>
+        /// Gets the full path of the parent directory for the current file or directory.
+        /// </summary>
         public string ParentDirectory { get; }
 
         /// <summary>
@@ -92,25 +75,6 @@ namespace Rheo.Storage
                     return (int)Math.Min(MAX_BUFFER_SIZE, Math.Max(MIN_BUFFER_SIZE, size / 100)); // Aim for ~100 chunks
             }
         }
-
-        /// <summary>
-        /// Gets the storage information. This property will throw an exception if the information is not available.
-        /// </summary>
-        public T Information => _storageInfo ?? throw new InvalidOperationException("Storage information is not available.");
-
-        /// <inheritdoc cref="StorageInfomation.MimeType"/>
-        public string ContentType => Information.MimeType;
-
-        /// <inheritdoc cref="StorageInfomation.DisplayName"/>
-        public string? DisplayName => Information.DisplayName;
-
-        /// <inheritdoc cref="StorageInfomation.TypeName"/>
-        public string? DisplayType => Information.TypeName;
-
-        public bool IsReadOnly => Information.AttributeFlags.HasFlag(FileAttributes.ReadOnly);
-        public bool IsHidden => Information.AttributeFlags.HasFlag(FileAttributes.Hidden);
-        public bool IsSystem => Information.AttributeFlags.HasFlag(FileAttributes.System);
-        public bool IsTemporary => Information.AttributeFlags.HasFlag(FileAttributes.Temporary);
         #endregion
 
         #region Methods
@@ -220,7 +184,7 @@ namespace Rheo.Storage
 
         public override bool Equals(object? obj)
         {
-            if (obj is StorageController<T> other)
+            if (obj is StorageController other)
             {
                 return string.Equals(FullPath, other.FullPath, StringComparison.OrdinalIgnoreCase);
             }

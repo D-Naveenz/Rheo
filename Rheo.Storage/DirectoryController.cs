@@ -4,19 +4,36 @@ using System.Diagnostics;
 namespace Rheo.Storage
 {
     /// <summary>
-    /// Represents a directory in the file system and provides methods for performing operations such as copying,
-    /// moving, deleting, and retrieving information about the directory.
+    /// Provides functionality for managing and interacting with directories in the file system.
     /// </summary>
-    /// <remarks>This class extends <see cref="StorageController{T}"/> to provide functionality specific to
-    /// directories. It supports asynchronous operations for copying, moving, and deleting directories, as well as
-    /// retrieving their size and creation time. <para> The class ensures thread safety for concurrent operations where
-    /// applicable. However, callers should ensure that the directory is not modified externally while operations are in
-    /// progress. </para></remarks>
-    /// <param name="fileNameOrPath"></param>
-    /// <param name="isInfoRequired"></param>
-    public class DirectoryController(string fileNameOrPath, bool isInfoRequired = true) : 
-        StorageController<DirectoryInfomation>(fileNameOrPath, isInfoRequired, AssertAs.Directory)
+    /// <remarks>The <see cref="DirectoryController"/> class extends <see cref="StorageController"/> to
+    /// provide directory-specific operations, such as retrieving files, subdirectories, and metadata about the
+    /// directory. It also implements <see cref="IStorageInfoContainer{T}"/> to expose detailed information about the
+    /// directory through the <see cref="Information"/> property. <para> This class supports operations such as copying,
+    /// moving, renaming, and deleting directories, as well as retrieving directory contents and metadata. It ensures
+    /// proper handling of exceptions and provides additional context for error scenarios. </para> <para> Use this class
+    /// when working with directories in a structured and programmatic way, especially when additional metadata or
+    /// advanced operations are required. </para></remarks>
+    public class DirectoryController : StorageController, IStorageInfoContainer<DirectoryInfomation>
     {
+        private readonly DirectoryInfomation? _storageInfo;
+
+        public DirectoryController(string fileNameOrPath, bool isInfoRequired = true) : base(fileNameOrPath, AssertAs.Directory)
+        {
+            // Initialize storage information if required
+            try
+            {
+                if (isInfoRequired)
+                {
+                    _storageInfo = Activator.CreateInstance(typeof(DirectoryInfomation), FullPath) as DirectoryInfomation;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Could not create an instance of type {typeof(DirectoryInfomation).FullName}.", ex);
+            }
+        }
+
         public override DateTime CreatedAt => Directory.GetCreationTime(FullPath);
 
         public override bool IsAvailable => Directory.Exists(FullPath);
@@ -27,6 +44,23 @@ namespace Rheo.Storage
         /// <inheritdoc cref="DirectoryInfomation.NoOfDirectories"/>/>
         public int NoOfDirectories => Information.NoOfDirectories;
 
+        public DirectoryInfomation Information => _storageInfo ?? throw new InvalidOperationException("Storage information is not available.");
+
+        public string ContentType => Information.MimeType;
+
+        public string? DisplayName => Information.DisplayName;
+
+        public string? DisplayType => Information.TypeName;
+
+        public bool IsReadOnly => Information.AttributeFlags.HasFlag(FileAttributes.ReadOnly);
+
+        public bool IsHidden => Information.AttributeFlags.HasFlag(FileAttributes.Hidden);
+
+        public bool IsSystem => Information.AttributeFlags.HasFlag(FileAttributes.System);
+
+        public bool IsTemporary => Information.AttributeFlags.HasFlag(FileAttributes.Temporary);
+
+        #region Methods
         /// <summary>
         /// Retrieves the file names from the directory represented by this instance, based on the specified search
         /// pattern and search option.
@@ -338,5 +372,6 @@ namespace Rheo.Storage
         {
             return Stringify(AssertAs.Directory, DisplayName, DisplayType);
         }
+        #endregion
     }
 }
