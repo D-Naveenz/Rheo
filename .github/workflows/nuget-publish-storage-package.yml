@@ -39,8 +39,4 @@ jobs:
       run: dotnet pack ${{ env.Storage_Project_Path }} --configuration Release --no-build --output ./nupkg
 
     - name: Publish NuGet package
-      uses: nuget/actions@v1
-      with:
-        api-key: ${{ secrets.NUGET_API_KEY }}
-        packages: ./nupkg/*.nupkg
-        source: https://api.nuget.org/v3/index.json
+      run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
