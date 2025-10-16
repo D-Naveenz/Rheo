@@ -49,6 +49,6 @@ jobs:
       run: |
         echo Artifacts directory contents:
         cd artifacts
-        dir /b /a-d
+        Get-ChildItem -File
         # push all packages (skip duplicates to make reruns safe)
         dotnet nuget push *.nupkg --api-key $NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
