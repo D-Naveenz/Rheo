@@ -24,20 +24,21 @@ namespace Rheo.Test.Storage.Models
         /// <summary>
         /// Creates a test file of the specified resource type in the given directory.
         /// </summary>
-        /// <remarks>The content and file extension of the created file depend on the specified <paramref
-        /// name="resourceType"/>: <list type="bullet"> <item><description><see cref="ResourceType.Text"/>: A plain text
-        /// file with sample content.</description></item> <item><description><see cref="ResourceType.Image"/>: A small
-        /// PNG image.</description></item> <item><description><see cref="ResourceType.Binary"/>: A binary file with
-        /// predefined data.</description></item> <item><description><see cref="ResourceType.Document"/>: A document
-        /// file with predefined content.</description></item> <item><description><see cref="ResourceType.Video"/>: A
-        /// video file with predefined content.</description></item> </list></remarks>
-        /// <param name="resourceType">The type of resource to create. This determines the content and file extension of the test file.</param>
-        /// <param name="directory">The directory in which the test file will be created. The directory must exist and be writable.</param>
-        /// <returns>A <see cref="TestFile"/> instance representing the created file, including its full path.</returns>
+        /// <remarks>The content of the created file depends on the specified <paramref
+        /// name="resourceType"/>: <list type="bullet"> <item><description><see cref="ResourceType.Text"/>: A sample
+        /// text file.</description></item> <item><description><see cref="ResourceType.Image"/>: A small red dot PNG
+        /// image.</description></item> <item><description><see cref="ResourceType.Binary"/>: A binary file with
+        /// predefined content.</description></item> <item><description><see cref="ResourceType.Document"/>: A document
+        /// file loaded from embedded resources.</description></item> <item><description><see
+        /// cref="ResourceType.Video"/>: A video file loaded from embedded resources.</description></item> </list> The
+        /// method writes the file to the specified directory and returns a <see cref="TestFile"/> object representing
+        /// the created file.</remarks>
+        /// <param name="resourceType">The type of resource to create. Determines the content and file extension of the test file.</param>
+        /// <param name="directoryPath">The directory where the test file will be created. Must be a valid, writable path.</param>
+        /// <returns>A <see cref="TestFile"/> instance representing the created test file.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="resourceType"/> is not a valid <see cref="ResourceType"/> value.</exception>
-        public static TestFile Create(ResourceType resourceType, TestDirectory directory)
+        public static TestFile Create(ResourceType resourceType, string directoryPath)
         {
-            var directoryPath = directory.FullPath;
             byte[] resourceBytes;
             string fileExtension;
 
@@ -78,6 +79,27 @@ namespace Rheo.Test.Storage.Models
 
             // Create and return the TestFile instance
             return new TestFile(fullPath);
+        }
+
+        /// <summary>
+        /// Creates a test file of the specified resource type in the given directory.
+        /// </summary>
+        /// <remarks>The content of the created file depends on the specified <paramref
+        /// name="resourceType"/>: <list type="bullet"> <item><description><see cref="ResourceType.Text"/>: A sample
+        /// text file.</description></item> <item><description><see cref="ResourceType.Image"/>: A small red dot PNG
+        /// image.</description></item> <item><description><see cref="ResourceType.Binary"/>: A binary file with
+        /// predefined content.</description></item> <item><description><see cref="ResourceType.Document"/>: A document
+        /// file loaded from embedded resources.</description></item> <item><description><see
+        /// cref="ResourceType.Video"/>: A video file loaded from embedded resources.</description></item> </list> The
+        /// method writes the file to the specified directory and returns a <see cref="TestFile"/> object representing
+        /// the created file.</remarks>
+        /// <param name="resourceType">The type of resource to create. Determines the content and file extension of the test file.</param>
+        /// <param name="directory">The directory where the file will be created. Must not be null.</param>
+        /// <returns>A <see cref="TestFile"/> instance representing the created test file.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="resourceType"/> is not a valid <see cref="ResourceType"/> value.</exception>
+        public static TestFile Create(ResourceType resourceType, TestDirectory directory)
+        {
+            return Create(resourceType, directory.FullPath);
         }
 
         public void Update(OperationType operation)

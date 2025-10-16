@@ -333,10 +333,13 @@ namespace Rheo.Storage
                     BytesPerSecond = 0
                 });
             }
+            else
+            {
+                // Otherwise, perform copy + delete (cross-volume)
+                await CopyAsync(destination, overwrite, maxConcurrent, progress, cancellationToken);
+                await DeleteAsync();
+            }
 
-            // Otherwise, perform copy + delete (cross-volume)
-            await CopyAsync(destination, overwrite, maxConcurrent, progress, cancellationToken);
-            await DeleteAsync();
             Name = Path.GetFileName(destination);
         }
 
