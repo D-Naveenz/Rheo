@@ -4,6 +4,8 @@ using Rheo.Test.Storage.Models;
 
 namespace Rheo.Test.Storage
 {
+    [Trait(TestTraits.Category, TestTraits.Storage)]
+    [Trait(TestTraits.Feature, TestTraits.DirectoryController)]
     public class DirectoryControllerTests : IDisposable
     {
         private const string InvalidPattern = "\0";
@@ -151,7 +153,7 @@ namespace Rheo.Test.Storage
                         .Callback<StorageProgress>(p => reportedProgress = p);
 
             // Act
-            await controller.CopyAsync(destDirPath, overwrite: true, progress: mockProgress.Object);
+            await controller.CopyAsync(destDirPath, overwrite: true, progress: mockProgress.Object, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(_destDir.IsAvailable);
@@ -178,7 +180,7 @@ namespace Rheo.Test.Storage
             var mockProgress = new Mock<IProgress<StorageProgress>>();
 
             // Act
-            await controller.MoveAsync(destDirPath, overwrite: true, progress: mockProgress.Object);
+            await controller.MoveAsync(destDirPath, overwrite: true, progress: mockProgress.Object, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(_destDir.IsAvailable);

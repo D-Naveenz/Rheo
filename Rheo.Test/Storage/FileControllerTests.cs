@@ -4,6 +4,8 @@ using Rheo.Test.Storage.Models;
 
 namespace Rheo.Test.Storage
 {
+    [Trait(TestTraits.Category, TestTraits.Storage)]
+    [Trait(TestTraits.Feature, TestTraits.FileController)]
     public class FileControllerTests : IDisposable
     {
         private readonly TestDirectory _testDir;
@@ -131,7 +133,7 @@ namespace Rheo.Test.Storage
                         .Callback<StorageProgress>(p => reportedProgress = p);
 
             // Act
-            await controller.CopyAsync(destDirPath, overwrite: true, progress: mockProgress.Object);
+            await controller.CopyAsync(destDirPath, overwrite: true, progress: mockProgress.Object, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             mockProgress.Verify(p => p.Report(It.IsAny<StorageProgress>()), Times.AtLeastOnce());
