@@ -19,7 +19,7 @@ namespace Rheo.Extensions.Hosting
         /// process, the exception is propagated to the caller.</remarks>
         /// <param name="builder">The <see cref="HostApplicationBuilder"/> used to configure and build the application host.</param>
         /// <returns>A <see cref="Task"/> that represents the asynchronous operation.</returns>
-        public static async Task BuildAndRunAsync(this HostApplicationBuilder builder)
+        public static async Task LaunchAsync(this HostApplicationBuilder builder)
         {
             try
             {
