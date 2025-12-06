@@ -237,13 +237,13 @@ namespace Rheo.Storage.DefinitionsBuilder.RIFF
                         definition.FileType = text;
                         break;
                     case EXT_CHUNK_ID:
-                        definition.Extension = text;
+                        definition.Extension = text.ToLowerInvariant();
                         break;
                     case TAG_CHUNK_ID:
                         definition.Tag = BitConverter.ToInt32(infoData, 0);
                         break;
                     case MIME_CHUNK_ID:
-                        definition.MimeType = text.Replace("\"", ""); // Some MIME type strings contains residual " chars
+                        definition.MimeType = text;
                         break;
                     case NAME_CHUNK_ID:
                         definition.FileName = text;

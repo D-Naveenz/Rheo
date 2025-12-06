@@ -1,0 +1,1 @@
+[Media Types](https://www.iana.org/assignments/media-types/media-types.xhtml) are from the Internet Assigned Numbers Authority

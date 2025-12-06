@@ -1,4 +1,6 @@
 ﻿using MessagePack;
+using Rheo.Storage.DefinitionsBuilder.Generation;
+using Rheo.Storage.DefinitionsBuilder.Models.Build;
 using Rheo.Storage.DefinitionsBuilder.Models.Definition;
 using Rheo.Storage.DefinitionsBuilder.Models.Package;
 using Rheo.Storage.DefinitionsBuilder.RIFF;
@@ -11,12 +13,6 @@ namespace Rheo.Storage.DefinitionsBuilder
 {
     public class PackageCompiler
     {
-        private const string TrIDLocation = @"Data";
-        private const string ScriptName = "trid.py";
-        private const string PackageName = "triddefs.trd";
-        private const string OutputJson = "filedefs.metadata.json";
-        private const string OutputPackage = "filedefs.dat";
-
         private readonly string _tridVersion;
         private readonly string _packagePath;
 
@@ -28,15 +24,15 @@ namespace Rheo.Storage.DefinitionsBuilder
         {
             // Verify paths
             var errormessage = "Couldn't find the TrID - File Identifier or the data package in the Data Folder.";
-            var scriptPath = Path.GetFullPath(Path.Combine(TrIDLocation, ScriptName));
+            var scriptPath = Path.GetFullPath(Path.Combine(Configuration.TridLocation, Configuration.TRID_SCRIPT_NAME));
             if (!File.Exists(scriptPath))
             {
-                throw new FileNotFoundException(errormessage, ScriptName);
+                throw new FileNotFoundException(errormessage, Configuration.TRID_SCRIPT_NAME);
             }
-            _packagePath = Path.GetFullPath(Path.Combine(TrIDLocation, PackageName));
-            if (!File.Exists(scriptPath))
+            _packagePath = Path.GetFullPath(Path.Combine(Configuration.TridLocation, Configuration.TRID_PACKAGE_NAME));
+            if (!File.Exists(_packagePath))
             {
-                throw new FileNotFoundException(errormessage, PackageName);
+                throw new FileNotFoundException(errormessage, Configuration.TRID_PACKAGE_NAME);
             }
 
             // Configure metadata
@@ -61,20 +57,17 @@ namespace Rheo.Storage.DefinitionsBuilder
             }
 
             // Build
-            BuildDefinitions(Block);
+            BuildDefinitions(Block, outputPath);
 
             // Compile
             ExportToJson(outputPath);
             ExportToBinary(outputPath);
         }
 
-        private void BuildDefinitions(Dictionary<int, List<TrIDDefinition>> definitionsBlock)
+        private void BuildDefinitions(Dictionary<int, List<TrIDDefinition>> definitionsBlock, string outputPath)
         {
             // Flatten all definitions
-            var allDefinitions = definitionsBlock
-                .SelectMany(kvp => kvp.Value)
-                .Where(d => !string.IsNullOrEmpty(d.MimeType))
-                .ToList();
+            var allDefinitions = definitionsBlock.SelectMany(kvp => kvp.Value).ToList();
 
             // Build the definition collection
             Definitions = [.. allDefinitions
@@ -93,8 +86,10 @@ namespace Rheo.Storage.DefinitionsBuilder
                 })
                 .OrderByDescending(d => d.PriorityLevel)];
 
+            var defDict = Definitions.GroupByMimeType().Cleanse();
+
             var packageVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
-            var categories = BuildCategories(Definitions);
+            var categories = BuildCategories(Definitions, Configuration.GetDumpPath(outputPath));
 
             // Build package metadata
             CollectionMetadata = new Metadata
@@ -114,11 +109,43 @@ namespace Rheo.Storage.DefinitionsBuilder
             };
         }
 
-        private static List<string> BuildCategories(List<Definition> definitions)
+        private static List<string> BuildCategories(List<Definition> definitions, string? dumpPath = null)
         {
-            return [.. definitions
-                .Select(d => d.MimeType.ToLower().Split('/')[0])
-                .Distinct()];
+            var mimetypes = definitions
+                .GroupBy(d => d.MimeType)
+                .Select(g => new
+                {
+                    MimeType = g.Key,
+                    Extensions = g.Select(d => d.Extension).ToList()
+                })
+                .ToList();
+
+            var categories = mimetypes
+                .GroupBy(m => m.MimeType.Split('/')[0])
+                .Select(g => new MemoryDump
+                {
+                    Category = g.Key,
+                    MimeTypes = [.. g.Select(m => m.MimeType)],
+                    Extentions = [.. g.SelectMany(m => m.Extensions).Distinct()]
+                })
+                .ToList();
+
+            // Export memory dump if output path is provided
+            if (!string.IsNullOrWhiteSpace(dumpPath))
+            {
+                dumpPath = Path.GetFullPath(dumpPath);
+                if (!Directory.Exists(dumpPath))
+                {
+                    Directory.CreateDirectory(dumpPath);
+                }
+
+                var dumpFilePath = Path.Combine(dumpPath, "memorydump.json");
+                var json = JsonSerializer.Serialize(categories, MemoryDumpJsonContext.Default.ListMemoryDump);
+                File.WriteAllText(dumpFilePath, json);
+                Console.WriteLine("Memory dump has been created in {0}", dumpFilePath);
+            }
+
+            return [.. categories.Select(c => c.Category)];
         }
 
         private static int CalculatePriority(TrIDDefinition definition)
@@ -166,28 +193,34 @@ namespace Rheo.Storage.DefinitionsBuilder
 
         private void ExportToJson(string outputPath)
         {
-            outputPath = Path.Combine(outputPath, OutputJson);
+            outputPath = Path.Combine(outputPath, Configuration.FILEDEF_METADATA_NAME);
 
             var json = JsonSerializer.Serialize(CollectionMetadata, PackageMetadataJsonContext.Default.Metadata);
             File.WriteAllText(outputPath, json);
 
-            Console.WriteLine("Package metadata has been created in {0}", OutputJson);
+            Console.WriteLine("Package metadata has been exported to {0}", Configuration.FILEDEF_METADATA_NAME);
         }
 
         private void ExportToBinary(string outputPath)
         {
-            outputPath = Path.Combine(outputPath, OutputPackage);
+            outputPath = Path.Combine(outputPath, Configuration.FILEDEF_PACKAGE_NAME);
 
             var package = MessagePackSerializer.Serialize(Definitions);
             File.WriteAllBytes(outputPath, package);
             
-            Console.WriteLine("Package has been exported to {0}", OutputPackage);
+            Console.WriteLine("Package has been exported to {0}", Configuration.FILEDEF_PACKAGE_NAME);
         }
     }
 
     [JsonSourceGenerationOptions(WriteIndented = true)]
     [JsonSerializable(typeof(Metadata))]
     internal partial class PackageMetadataJsonContext : JsonSerializerContext
+    {
+    }
+
+    [JsonSourceGenerationOptions(WriteIndented = true)]
+    [JsonSerializable(typeof(List<MemoryDump>))]
+    internal partial class MemoryDumpJsonContext : JsonSerializerContext
     {
     }
 }
