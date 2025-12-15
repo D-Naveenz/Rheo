@@ -4,6 +4,7 @@ using Rheo.Storage.DefinitionsBuilder.Models.Definition;
 using Rheo.Storage.DefinitionsBuilder.Models.Package;
 using Rheo.Storage.DefinitionsBuilder.RIFF;
 using Rheo.Storage.DefinitionsBuilder.RIFF.Models;
+using Spectre.Console;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -12,8 +13,6 @@ namespace Rheo.Storage.DefinitionsBuilder
     public class PackageCompiler
     {
         private readonly string _scriptPath;
-
-        private int _cleanseCursorTop = 0;
 
         public Dictionary<int, List<TrIDDefinition>> Block { get; }
 
@@ -104,8 +103,7 @@ namespace Rheo.Storage.DefinitionsBuilder
                 .ToList();
 
             Console.WriteLine("Validading Definitions...");
-            var progressReporter = CreateProgressReporter();
-            var definitionDictionary = definitions.GroupByMimeType().Cleanse(progressReporter);
+            var definitionDictionary = definitions.GroupByMimeType().Cleanse(true);
             var dumpPath = Configuration.GetDumpPath(outputPath);
             definitionDictionary.CreateMemoryDump(dumpPath);
             Console.WriteLine("Memory dump has been created in {0}", dumpPath);
@@ -128,33 +126,6 @@ namespace Rheo.Storage.DefinitionsBuilder
             priority += definition.Patterns.Count * 10;
 
             return priority;
-        }
-
-        private SynchronousProgress<MimeCleanseProgressReport> CreateProgressReporter()
-        {
-            // Initialize cursor position for progress reporting
-            _cleanseCursorTop = Console.GetCursorPosition().Top;
-            Console.SetCursorPosition(0, _cleanseCursorTop);
-
-            return new SynchronousProgress<MimeCleanseProgressReport>(report =>
-            {
-                // Clear current line and update progress
-                Console.SetCursorPosition(0, _cleanseCursorTop);
-
-                // Clean the lines
-                for (int i = 0; i < 2; i++)
-                {
-                    Console.WriteLine(new string(' ', Console.WindowWidth));
-                }
-
-                // Reset cursor position
-                Console.SetCursorPosition(0, _cleanseCursorTop);
-
-                // Write progress report
-                // Console.WriteLine($"Type: {report.CurrentMimeType}");
-                Console.WriteLine($"Valid: {report.ValidCount} | Invalid: {report.InvalidCount}");
-                Console.WriteLine($"Progress: {report.ProcessedCount}/{report.TotalCount} ({report.Percentage:F1}%)");
-            });
         }
 
         private static string GetTrIDVersion(string trIdPath)
