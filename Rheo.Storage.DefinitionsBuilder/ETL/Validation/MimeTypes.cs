@@ -1,4 +1,6 @@
-﻿namespace Rheo.Storage.DefinitionsBuilder.ETL.Validation
+﻿using Rheo.Storage.DefinitionsBuilder.Settings;
+
+namespace Rheo.Storage.DefinitionsBuilder.ETL.Validation
 {
     internal static class MimeTypes
     {

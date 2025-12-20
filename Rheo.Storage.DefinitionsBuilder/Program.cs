@@ -1,6 +1,6 @@
-﻿using Rheo.Storage.DefinitionsBuilder;
-using Rheo.Storage.DefinitionsBuilder.ETL.Packaging;
+﻿using Rheo.Storage.DefinitionsBuilder.Settings;
 using Spectre.Console;
+using Spectre.Console.Cli;
 
 // Analyze a file
 //var results = TridFileAnalyzer.AnalyzeFile("test.pdf", definitionsBlock);
@@ -11,17 +11,53 @@ using Spectre.Console;
 //}
 
 // Display Banner
-var font = FigletFont.Load("Assets/Fonts/Basic.flf");
-AnsiConsole.Write(new FigletText(font, "Rheo").Centered().Color(Color.Green));
-AnsiConsole.Write(new Align(new Text(Configuration.ProductName, new Style(Color.Yellow)), HorizontalAlignment.Center));
-var rule = new Rule($"[yellow]v{Configuration.Version}[/]");
-AnsiConsole.Write(rule);
+if (args.Length == 0)
+{
+    var font = FigletFont.Load(Configuration.FigletFont);
+    AnsiConsole.Write(new FigletText(font, "Rheo").Centered().Color(Color.Green));
+    AnsiConsole.Write(new Align(new Text(Configuration.ProductName, new Style(Color.Yellow)), HorizontalAlignment.Center));
+    var rule = new Rule($"[yellow]v{Configuration.Version}[/]");
+    AnsiConsole.Write(rule);
+    Console.WriteLine();
+}
 
-// Build Definitions Package
-var package = PackageBuilder.Build();
-// Export Package
-Exporter.ExportPackage(package, "Output");
-// Save Package Log
-Exporter.SavePackageLogs("Logs", package.Logs);
+// Initialize app container
+var app = new CommandApp();
+app.Configure(config =>
+{
+    config.SetApplicationName(Configuration.ExeName);
+    config.SetApplicationVersion(Configuration.ProductName + " " + Configuration.Version);
+    config.AddCommand<PackageCommand>("pack")
+        .WithDescription("Compile Rheo File Definition Package using the data source")
+        .WithExample("pack")
+        .WithExample("pack", @"Data\TrID\triddefs.trd")
+        .WithExample("pack", @"Data\TrID\triddefs.trd", "-o Output");
 
-Console.WriteLine("\nDatabase ready for Rheo Storage library!");
+#if DEBUG
+    config.PropagateExceptions();
+#endif
+});
+app.Run(args);
+
+if (args.Length == 0)
+{
+    // Interactive mode
+    Console.WriteLine();
+    Console.WriteLine("Type 'exit' to quit.");
+    while (true)
+    {
+        Console.WriteLine();
+        Console.Write("> ");
+        var input = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(input))
+            continue;
+        else if (input.Equals("exit", StringComparison.OrdinalIgnoreCase))
+        {
+            break;
+        }
+        else
+        {
+            app.Run(input.Split(' '));
+        }
+    }
+}

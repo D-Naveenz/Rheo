@@ -2,6 +2,7 @@
 using Rheo.Storage.DefinitionsBuilder.ETL.Sluice;
 using Rheo.Storage.DefinitionsBuilder.ETL.Validation;
 using Rheo.Storage.DefinitionsBuilder.Models;
+using Rheo.Storage.DefinitionsBuilder.Settings;
 
 namespace Rheo.Storage.DefinitionsBuilder.ETL.Packaging
 {

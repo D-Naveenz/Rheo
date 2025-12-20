@@ -1,23 +1,38 @@
-﻿using System.Reflection;
+﻿using Rheo.Storage.DefinitionsBuilder.Properties;
+using System.Reflection;
+using System.Text;
 
-namespace Rheo.Storage.DefinitionsBuilder
+namespace Rheo.Storage.DefinitionsBuilder.Settings
 {
     internal static class Configuration
     {
-        private const string ASSETS_PATH = "Assets";
-        private const string DUMP_PATH = "Dumps";
+        private const string DataPath = "Data";
 
         public const string FILEDEF_PACKAGE_NAME = "filedefs";
 
         /// <summary>
         /// Gets the absolute path to the assets directory.
         /// </summary>
-        public static string AssetsPath => Path.GetFullPath(ASSETS_PATH);
+        public static string AssetsPath => Path.GetFullPath(DataPath);
 
         /// <summary>
         /// Gets the file system path to the TrID directory within the assets folder.
         /// </summary>
         public static string TridLocation => Path.Combine(AssetsPath, "TrID");
+
+        /// <summary>
+        /// Gets the name of the currently executing assembly's main executable file.
+        /// </summary>
+        /// <remarks>If the assembly name cannot be determined, the value defaults to
+        /// "defbuild.exe".</remarks>
+        public static string ExeName
+        {
+            get
+            {
+                var name = Assembly.GetExecutingAssembly().GetName().Name;
+                return string.IsNullOrEmpty(name)? name + ".exe" : "defbuild.exe";
+            }
+        }
 
         /// <summary>
         /// Gets the version of the current executing assembly in the format "Major.Minor".
@@ -49,34 +64,24 @@ namespace Rheo.Storage.DefinitionsBuilder
                 }
 
                 // Fallback product name if attribute is not found
-                return "Rheo Definitions Builder";
+                return "Definitions Builder";
             }
         }
 
         /// <summary>
-        /// Determines the output path to use, defaulting to a directory named "Output" in the current working directory
-        /// if none is provided.
+        /// Gets a <see cref="MemoryStream"/> containing the embedded FIGlet font data in UTF-8 encoding.
         /// </summary>
-        /// <param name="outputPath">The specified output path. If <see langword="null"/>, empty, or whitespace, a default path is used.</param>
-        /// <returns>The resolved output path as a string.</returns>
-        public static string GetOutputPath(string? outputPath = null)
+        /// <remarks>The returned stream contains the basic FIGlet font, which can be used for rendering
+        /// ASCII art text.  The caller is responsible for disposing the returned <see cref="MemoryStream"/> when it is
+        /// no longer needed.</remarks>
+        public static MemoryStream FigletFont
         {
-            if (string.IsNullOrWhiteSpace(outputPath))
+            get
             {
-                outputPath = Path.Combine(Directory.GetCurrentDirectory(), "Output");
+                var encoding = Encoding.UTF8;
+                byte[] bytes = encoding.GetBytes(Resources.FigletBasicFont);
+                return new MemoryStream(bytes);
             }
-            return outputPath;
         }
-
-        /// <summary>
-        /// Constructs the full path for the memory dump directory based on the specified output path.
-        /// </summary>
-        /// <remarks>This method ensures that the dump path is constructed relative to the provided output
-        /// path or a default location.</remarks>
-        /// <param name="outputPath">The base output path to use for constructing the dump path. If <see langword="null"/> or empty, a default
-        /// output path is used.</param>
-        /// <returns>The full path to the memory dump directory, combining the specified or default output path with the dump directory
-        /// name.</returns>
-        public static string GetDumpPath(string? outputPath = null) => Path.Combine(GetOutputPath(outputPath), DUMP_PATH);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using Rheo.Storage.DefinitionsBuilder.Models;
+using Rheo.Storage.DefinitionsBuilder.Settings;
 using System.Text.Json.Serialization;
 
 namespace Rheo.Storage.DefinitionsBuilder.ETL.Packaging

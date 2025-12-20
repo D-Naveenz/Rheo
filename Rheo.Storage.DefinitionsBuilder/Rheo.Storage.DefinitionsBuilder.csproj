@@ -5,12 +5,13 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
     <AssemblyName>defbuild</AssemblyName>
     <Authors>Naveen Dharmathunga</Authors>
     <Product>Definitions Builder</Product>
     <Copyright>© 2025 Naveen Dharmathunga - All Rights Reserved.</Copyright>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.2.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,10 +19,25 @@
     <PackageReference Include="Spectre.Console.Cli" Version="0.53.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
     <Target Name="CopyAssets" AfterTargets="PostBuildEvent">
         <ItemGroup>
-            <MyAssets Include="Assets\**\*.*" />
+            <MyAssets Include="Data\**\*.*" />
         </ItemGroup>
-        <Copy SourceFiles="@(MyAssets)" DestinationFolder="$(OutputPath)\Assets\%(RecursiveDir)" />
+        <Copy SourceFiles="@(MyAssets)" DestinationFolder="$(OutputPath)\Data\%(RecursiveDir)" />
     </Target>
 </Project>
