@@ -22,7 +22,7 @@ namespace Rheo.Storage.DefinitionsBuilder.Models
         /// Gets or sets the file extension associated with the type definition.
         /// </summary>
         [Key(1)]
-        public string Extension { get; set; } = string.Empty;
+        public string[] Extensions { get; set; } = [];
         /// <summary>
         /// Gets or sets the MIME type associated with the content.
         /// </summary>

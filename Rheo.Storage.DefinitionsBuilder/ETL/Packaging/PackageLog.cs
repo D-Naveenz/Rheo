@@ -4,16 +4,16 @@ using System.Text;
 
 namespace Rheo.Storage.DefinitionsBuilder.ETL.Packaging
 {
-    [DebuggerDisplay("PackageLog: {LogType}, MimeCount={MimeCount}, Definitions={DefinitionsCount}")]
+    [DebuggerDisplay("PackageLog: {LogType}, MimeCount={MimeCount}, Extensions={ExtensionsCount}")]
     public class PackageLog(string logType)
     {
-        private Dictionary<string, HashSet<string>> _defiitionsByMime = [];
+        private Dictionary<string, HashSet<string>> _extensionsByMime = [];
 
         public DateTime Timestamp { get; } = DateTime.UtcNow;
         public string LogType { get; } = logType;
-        public int MimeCount => _defiitionsByMime.Count;
-        public int DefinitionsCount => _defiitionsByMime.Values.Sum(list => list.Count);
-        public Dictionary<string, HashSet<string>> DefiitionsByMime => _defiitionsByMime;
+        public int MimeCount => _extensionsByMime.Count;
+        public int ExtensionsCount => _extensionsByMime.Values.Sum(list => list.Count);
+        public Dictionary<string, HashSet<string>> ExtensionsByMime => _extensionsByMime;
 
         /// <summary>
         /// Sets the collection of definitions grouped by MIME type.
@@ -23,9 +23,9 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Packaging
         /// or consists only of whitespace, it is treated as "Unknown".</param>
         public void SetDefinitionsPackage(Dictionary<string, List<Definition>> definitionsByMime)
         {
-            _defiitionsByMime = definitionsByMime.ToDictionary(
+            _extensionsByMime = definitionsByMime.ToDictionary(
                 kvp => string.IsNullOrWhiteSpace(kvp.Key) ? "Unknown" : kvp.Key,
-                kvp => kvp.Value.Select(d => d.Extension).ToHashSet()
+                kvp => kvp.Value.SelectMany(d => d.Extensions).ToHashSet()
             );
         }
 
@@ -44,12 +44,12 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Packaging
             sb.AppendLine($"Log type: {LogType}");
             sb.AppendLine($"Timestamp: {Timestamp}");
             sb.AppendLine($"Total MIME types: {MimeCount}");
-            sb.AppendLine($"Total definitions: {DefinitionsCount}");
+            sb.AppendLine($"Total extensions: {ExtensionsCount}");
             sb.AppendLine();
             
-            foreach (var kvp in _defiitionsByMime)
+            foreach (var kvp in _extensionsByMime)
             {
-                sb.AppendLine($"MIME Type: {kvp.Key} - Definitions: {kvp.Value.Count}");
+                sb.AppendLine($"MIME Type: {kvp.Key} - Extensions: {kvp.Value.Count}");
                 sb.AppendLine(string.Join(", ", kvp.Value));
                 sb.AppendLine();
             }

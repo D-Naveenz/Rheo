@@ -28,8 +28,11 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Sluice
             var allowedExtensions = CommonExtensions.GetExtensionsByLevelRange(minLevel, maxLevel);
 
             return definitions.Where(d =>
-                !string.IsNullOrEmpty(d.Extension) &&
-                allowedExtensions.Contains(NormalizeExtension(d.Extension)));
+                d.Extensions.Length > 0 &&
+                d.Extensions.Any(
+                    ext => !string.IsNullOrWhiteSpace(ext) && allowedExtensions.Contains(NormalizeExtension(ext))
+                    )
+                );
         }
 
         
@@ -56,13 +59,22 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Sluice
 
             foreach (var definition in definitions)
             {
-                if (string.IsNullOrEmpty(definition.Extension))
+                if (definition.Extensions == null || definition.Extensions.Length == 0)
                 {
                     result[0].Add(definition);
                     continue;
                 }
 
-                var level = CommonExtensions.GetLevel(definition.Extension);
+                var level = 0;
+                if (definition.Extensions.Length == 1)
+                {
+                    level = CommonExtensions.GetLevel(definition.Extensions[0]);
+                }
+                else
+                {
+                    level = CommonExtensions.GetLevel(definition.Extensions);
+                }
+
                 definition.Level = level;
                 definition.PriorityLevel = Valuation.CalculatePriority(definition);
                 result[level].Add(definition);

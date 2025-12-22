@@ -75,6 +75,33 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Sluice
         }
 
         /// <summary>
+        /// Determines the level value based on an array of file extensions.
+        /// </summary>
+        /// <param name="extensions">An array of file extension strings to evaluate. Cannot be null; may be empty.</param>
+        /// <returns>The level value associated with the provided extensions. Returns 0 if the array is null or empty.</returns>
+        public static int GetLevel(string[] extensions)
+        {
+            if (extensions == null || extensions.Length == 0)
+                return 0;
+            int highestLevel = 0;
+            foreach (var ext in extensions)
+            {
+                var level = GetLevel(ext);
+                if (highestLevel > 0)
+                {
+                    if (highestLevel > level)
+                        highestLevel = level;
+                    continue;
+                }
+                else
+                {
+                    highestLevel = level;
+                }
+            }
+            return highestLevel;
+        }
+
+        /// <summary>
         /// Determines whether the specified file extension is a commonly used extension.
         /// </summary>
         /// <remarks>The comparison is case-insensitive. An empty or null value returns <see

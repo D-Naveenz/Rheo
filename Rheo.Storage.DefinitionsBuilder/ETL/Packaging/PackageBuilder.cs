@@ -64,7 +64,7 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Packaging
                     .Select(trid => new Definition
                     {
                         FileType = trid.FileType,
-                        Extension = trid.Extension,
+                        Extensions = trid.Extension.Split('/', StringSplitOptions.RemoveEmptyEntries),
                         MimeType = trid.MimeType,
                         Remarks = trid.Remarks,
                         Signature = new Signature
@@ -92,6 +92,11 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Packaging
             var (validDefs, invalidDefs) = definitions.Validate(true);
 
             // Create logs
+#if DEBUG
+            var validLog = new PackageLog("validMimeTypes");
+            validLog.SetDefinitionsPackage(validDefs);
+            logs.Add(validLog);
+#endif
             var invalidLog = new PackageLog("InvalidMimeTypes");
             invalidLog.SetDefinitionsPackage(invalidDefs);
             logs.Add(invalidLog);
@@ -99,7 +104,7 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Packaging
             Console.WriteLine("Mime types have been cleansed.");
             Console.WriteLine("Result: {0} valid definitions | {1} invalid definitions", 
                 validDefs.Values.Sum(list => list.Count), 
-                invalidLog.DefinitionsCount
+                invalidDefs.Values.Sum(list => list.Count)
             );
             return validDefs.Flatten();
         }
@@ -122,7 +127,9 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Packaging
             logs.Add(invalidLog);
 
             Console.WriteLine("Definitions have been filtered by extension levels.");
-            Console.WriteLine("Result: {0} valid definitions | {1} invalid definitions", validDefinitions.Count, invalidLog.DefinitionsCount);
+            Console.WriteLine("Result: {0} valid definitions | {1} invalid definitions", 
+                validDefinitions.Count, 
+                invalidDefinitions.Count);
             return validDefinitions;
         }
 
