@@ -26,11 +26,12 @@ namespace Rheo.Storage.DefinitionsBuilder.Settings
         public override int Execute(CommandContext context, PackageSettings settings, CancellationToken cancellationToken)
         {
             // Build Definitions Package
-            var package = PackageBuilder.Build();
+            var builder = new PackageBuilder();
+            var package = builder.Build();
             // Export Package
             Exporter.ExportPackage(package, settings.OutputPath);
             // Save Package Log
-            Exporter.SavePackageLogs("Logs", package.Logs);
+            Exporter.SavePackageLogs("Logs", builder.Logs);
 
             Console.WriteLine("\nDatabase ready for Rheo Storage library!");
             return 0;

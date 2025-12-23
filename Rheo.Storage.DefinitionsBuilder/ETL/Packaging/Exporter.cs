@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using Rheo.Storage.DefinitionsBuilder.Settings;
+using Rheo.Storage.MIME.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
