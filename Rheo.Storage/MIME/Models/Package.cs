@@ -1,15 +1,13 @@
 ﻿using MessagePack;
-using Rheo.Storage.DefinitionsBuilder.Settings;
-using Rheo.Storage.MIME.Models;
 using System.Text.Json.Serialization;
 
-namespace Rheo.Storage.DefinitionsBuilder.ETL.Packaging
+namespace Rheo.Storage.MIME.Models
 {
     [MessagePackObject]
     public partial class Package
     {
         [Key(0)]
-        public string Version { get; set; } = Configuration.Version;
+        public string Version { get; set; } = string.Empty;
         [Key(1)]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         [Key(2)]
@@ -22,9 +20,6 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Packaging
         public int TotalMimeTypes => Definitions.Select(def => def.MimeType).Distinct().Count();
         [Key(3)]
         public List<Definition> Definitions { get; set; } = [];
-        [JsonIgnore]
-        [IgnoreMember]
-        public List<PackageLog> Logs { get; set; } = [];
     }
 
     [Flags]

@@ -1,4 +1,4 @@
-﻿using Rheo.Storage.DefinitionsBuilder.Models;
+﻿using Rheo.Storage.MIME.Models;
 using Spectre.Console;
 
 namespace Rheo.Storage.DefinitionsBuilder.ETL.Validation

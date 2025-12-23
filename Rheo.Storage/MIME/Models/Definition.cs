@@ -1,7 +1,6 @@
 ﻿using MessagePack;
-using System.Text.Json.Serialization;
 
-namespace Rheo.Storage.DefinitionsBuilder.Models
+namespace Rheo.Storage.MIME.Models
 {
     /// <summary>
     /// Represents a type definition that includes metadata such as file type, extension, MIME type, and additional
@@ -9,7 +8,6 @@ namespace Rheo.Storage.DefinitionsBuilder.Models
     /// </summary>
     /// <remarks>This class is used to encapsulate metadata and properties associated with a specific type
     /// definition.  It includes details such as the file type, file extension, MIME type, and priority level, as well
-    /// as a digital signature  and optional remarks for additional context.</remarks>
     [MessagePackObject]
     public partial class Definition
     {
@@ -43,11 +41,10 @@ namespace Rheo.Storage.DefinitionsBuilder.Models
         /// </summary>
         [Key(5)]
         public int PriorityLevel { get; set; } = 0;
-        /// <summary>
-        /// Gets or sets the level of the entity.
-        /// </summary>
-        [JsonIgnore]
-        [IgnoreMember]
-        public int Level { get; set; } = 0;
+
+        public override string ToString()
+        {
+            return $"{FileType} ({MimeType}) [{string.Join(", ", Extensions)}]";
+        }
     }
 }

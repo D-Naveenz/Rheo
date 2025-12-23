@@ -1,4 +1,4 @@
-﻿using Rheo.Storage.DefinitionsBuilder.Models;
+﻿using Rheo.Storage.MIME.Models;
 
 namespace Rheo.Storage.DefinitionsBuilder.ETL.Sluice
 {
@@ -65,7 +65,7 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Sluice
                     continue;
                 }
 
-                var level = 0;
+                int level;
                 if (definition.Extensions.Length == 1)
                 {
                     level = CommonExtensions.GetLevel(definition.Extensions[0]);
@@ -75,8 +75,7 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Sluice
                     level = CommonExtensions.GetLevel(definition.Extensions);
                 }
 
-                definition.Level = level;
-                definition.PriorityLevel = Valuation.CalculatePriority(definition);
+                definition.PriorityLevel = Valuation.CalculatePriority(definition, level);
                 result[level].Add(definition);
             }
 

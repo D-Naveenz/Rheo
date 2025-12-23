@@ -1,4 +1,4 @@
-﻿using Rheo.Storage.DefinitionsBuilder.Models;
+﻿using Rheo.Storage.MIME.Models;
 
 namespace Rheo.Storage.DefinitionsBuilder.ETL.Sluice
 {
@@ -11,14 +11,15 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Sluice
         private const int IdentifiabilityWeight = 10;       // 0-10 points
 
         /// <summary>
-        /// Calculates the priority value for the specified <see cref="Definition"/> based on its characteristics.
+        /// Calculates the priority score for the specified definition at the given level.
         /// </summary>
-        /// <param name="definition">The <see cref="Definition"/> instance for which to calculate the priority. Cannot be null.</param>
-        /// <returns>An integer representing the calculated priority of the specified definition.</returns>
-        public static int CalculatePriority(Definition definition)
+        /// <param name="definition">The definition for which to calculate the priority score.</param>
+        /// <param name="level">The level to use when determining the priority. Must be a non-negative integer.</param>
+        /// <returns>An integer representing the calculated priority score for the definition at the specified level.</returns>
+        public static int CalculatePriority(Definition definition, int level)
         {
             int totalValue = 0;
-            totalValue += ValueByLevel(definition);
+            totalValue += ValueByLevel(level);
             totalValue += ValueBySignature(definition);
             totalValue += ValueByIdentifiability(definition);
             
@@ -26,13 +27,13 @@ namespace Rheo.Storage.DefinitionsBuilder.ETL.Sluice
         }
 
         /// <summary>
-        /// Calculates a score based on the extension level of the specified <see cref="Definition"/>.
+        /// Calculates the score associated with a given extension level.
         /// </summary>
-        /// <param name="definition">The <see cref="Definition"/> whose extension level is evaluated. Cannot be <see langword="null"/>.</param>
-        /// <returns>An integer score representing the importance of the extension level. Returns 0 if the extension is uncommon.</returns>
-        private static int ValueByLevel(Definition definition)
+        /// <param name="level">The extension level for which to calculate the score. Must be a non-negative integer. A value of 0 indicates
+        /// an uncommon extension.</param>
+        /// <returns>The score corresponding to the specified extension level. Returns 0 if the level is 0.</returns>
+        private static int ValueByLevel(int level)
         {
-            int level = definition.Level;
             int extensionScore = (6 - level) * ExtensionLevelWeight; // Higher level = higher score
             if (level == 0) extensionScore = 0; // Uncommon extensions get 0
             return extensionScore;
