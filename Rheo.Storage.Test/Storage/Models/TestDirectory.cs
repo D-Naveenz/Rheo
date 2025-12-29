@@ -1,8 +1,7 @@
-﻿using Rheo.Storage;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Diagnostics;
 
-namespace Rheo.Test.Storage.Models
+namespace Rheo.Storage.Test.Storage.Models
 {
     /// <summary>
     /// Represents a temporary test directory with a unique name, created in the system's temporary folder.

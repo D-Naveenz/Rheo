@@ -1,8 +1,7 @@
 using Moq;
-using Rheo.Storage;
-using Rheo.Test.Storage.Models;
+using Rheo.Storage.Test.Storage.Models;
 
-namespace Rheo.Test.Storage
+namespace Rheo.Storage.Test.Storage
 {
     [Trait(TestTraits.Category, TestTraits.Storage)]
     [Trait(TestTraits.Feature, TestTraits.FileController)]

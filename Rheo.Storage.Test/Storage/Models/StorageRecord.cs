@@ -1,6 +1,4 @@
-﻿using Rheo.Storage;
-
-namespace Rheo.Test.Storage.Models
+﻿namespace Rheo.Storage.Test.Storage.Models
 {
     /// <summary>
     /// Represents a record of storage-related information, including metadata such as the name, directory path, 

@@ -1,4 +1,4 @@
-﻿namespace Rheo.Test.Storage.Models
+﻿namespace Rheo.Storage.Test.Storage.Models
 {
     /// <summary>
     /// Specifies the type of operation to be performed.

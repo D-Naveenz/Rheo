@@ -1,4 +1,4 @@
-﻿namespace Rheo.Test.Storage.Models
+﻿namespace Rheo.Storage.Test.Storage.Models
 {
     internal interface ITestStorage
     {

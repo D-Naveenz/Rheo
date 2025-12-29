@@ -1,4 +1,4 @@
-﻿namespace Rheo.Test
+﻿namespace Rheo.Storage.Test
 {
     internal static class TestTraits
     {
