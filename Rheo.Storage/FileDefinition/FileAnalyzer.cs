@@ -1,4 +1,5 @@
 using Rheo.Storage.FileDefinition.Models;
+using Rheo.Storage.FileDefinition.Models.Result;
 
 namespace Rheo.Storage.FileDefinition
 {
@@ -13,23 +14,23 @@ namespace Rheo.Storage.FileDefinition
         private const int SCAN_WINDOW_SIZE = 8192; // 8KB scan window
 
         /// <summary>
-        /// Analyzes the specified file and returns a list of analysis results based on candidate definitions found in
-        /// the file header.
+        /// Analyzes the specified file to identify its content type and relevant definitions.
         /// </summary>
-        /// <remarks>The confidence value for each result is calculated as a percentage of the total
-        /// points assigned to all candidates. Results are ordered by descending score.</remarks>
+        /// <remarks>If no known definitions are matched but the file is non-empty, a fallback definition
+        /// is provided based on the file's content type. The method does not throw exceptions for missing or empty
+        /// files; instead, it returns an empty result.</remarks>
         /// <param name="filePath">The full path to the file to analyze. The file must exist and be accessible.</param>
-        /// <param name="checkStrings">true to perform additional string-based checks during analysis; otherwise, false. The default is true.</param>
-        /// <returns>A list of AnalysisResult objects representing the analysis results for the file. The list is empty if the
-        /// file does not exist, is inaccessible, or is empty.</returns>
-        public static List<AnalysisResult> AnalyzeFile(string filePath, bool checkStrings = true)
+        /// <param name="checkStrings">true to perform additional string-based analysis; otherwise, false. The default is true.</param>
+        /// <returns>An AnalysisResult containing the detected definitions for the file. If the file does not exist or is empty,
+        /// returns an empty AnalysisResult.</returns>
+        public static AnalysisResult AnalyzeFile(string filePath, bool checkStrings = true)
         {
             if (!File.Exists(filePath))
-                return [];
+                return new AnalysisResult();
 
             var fileInfo = new FileInfo(filePath);
             if (fileInfo.Length == 0)
-                return [];
+                return new AnalysisResult();
 
             // Read file header
             byte[] headerBuffer = ReadFileHeader(fileInfo, SCAN_WINDOW_SIZE);
@@ -38,8 +39,7 @@ namespace Rheo.Storage.FileDefinition
             var candidateDefinitions = GetCandidateDefinitions(headerBuffer);
             
             // Score each candidate
-            var results = new List<AnalysisResult>();
-            var totalPoints = 0;
+            var result = new AnalysisResult();
 
             foreach (var definition in candidateDefinitions)
             {
@@ -47,41 +47,19 @@ namespace Rheo.Storage.FileDefinition
                 
                 if (points > 0)
                 {
-                    totalPoints += points;
-                    results.Add(new AnalysisResult
-                    {
-                        Definition = definition,
-                        Points = points,
-                        Confidence = 0 // Will calculate after all scores
-                    });
+                    result.Definitions.Push(definition, points);
                 }
             }
 
             // Handle case where no candidates matched but header is non-empty
-            if (headerBuffer.Length > 0 && results.Count == 0)
+            if (headerBuffer.Length > 0 && result.Definitions.Count == 0)
             {
-                int points = 100;
-
                 // Use content type detector to determine if the file is text or binary
                 var fallbackDefinition = ContentTypeDetector.CreateFallbackDefinition(headerBuffer, filePath);
-                
-                results.Add(new AnalysisResult
-                {
-                    Definition = fallbackDefinition,
-                    Points = points, // Low score for fallback detection
-                    Confidence = 100 // 100% of available points (since it's the only result)
-                });
-
-                totalPoints += points;
+                result.Definitions.Push(fallbackDefinition, 100);
             }
 
-            // Calculate confidence percentages
-            foreach (var result in results)
-            {
-                result.Confidence = totalPoints > 0 ? result.Points * 100.0 / totalPoints : 0;
-            }
-
-            return [.. results.OrderByDescending(r => r.Points)];
+            return result;
         }
 
         private static byte[] ReadFileHeader(FileInfo fileInfo, int maxSize)

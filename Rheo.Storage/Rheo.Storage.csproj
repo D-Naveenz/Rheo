@@ -12,6 +12,7 @@
     <Copyright>Copyright (c) 2025 Naveen Dharmathunga, All rights reserved.</Copyright>
     <Description>Rheo.Storage is a modern, high-performance library for managing files and directories with rich metadata, asynchronous operations, and progress reporting.</Description>
     <Version>0.1.2-beta.1</Version>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,7 +30,6 @@
 
   <ItemGroup>
     <Folder Include="Assets\" />
-    <Folder Include="FileDefinition\Models\Result\" />
   </ItemGroup>
 
   <ItemGroup>

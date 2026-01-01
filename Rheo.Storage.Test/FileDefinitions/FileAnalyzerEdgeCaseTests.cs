@@ -4,8 +4,8 @@ using Rheo.Storage.Test.Utilities;
 
 namespace Rheo.Storage.Test.FileDefinitions
 {
-    [Trait(TestTraits.Category, TestTraits.Storage)]
     [Trait(TestTraits.Feature, "FileAnalyzer")]
+    [Trait(TestTraits.Category, "Edge Case Tests")]
     public class FileAnalyzerEdgeCaseTests : IDisposable
     {
         private readonly TestDirectory _testDir;
@@ -24,12 +24,12 @@ namespace Rheo.Storage.Test.FileDefinitions
             File.WriteAllBytes(pdfPath, pdfHeader);
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(pdfPath, checkStrings: false);
+            var result = FileAnalyzer.AnalyzeFile(pdfPath, checkStrings: false);
 
             // Assert
-            Assert.NotEmpty(results);
-            var topResult = results.First();
-            Assert.Contains("pdf", topResult.Definition.Extensions, StringComparer.OrdinalIgnoreCase);
+            Assert.NotEmpty(result.Extensions);
+            var topResult = result.Extensions.First();
+            Assert.Contains("pdf", topResult.Subject, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
@@ -42,19 +42,19 @@ namespace Rheo.Storage.Test.FileDefinitions
                 );
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(testFile.FullPath);
+            var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
 
             // Assert
-            if (results.Count > 1)
+            if (result.Definitions.Count > 1)
             {
                 // Verify ranking is deterministic
                 var firstRun = FileAnalyzer.AnalyzeFile(testFile.FullPath);
                 var secondRun = FileAnalyzer.AnalyzeFile(testFile.FullPath);
 
-                Assert.Equal(firstRun.Count, secondRun.Count);
-                for (int i = 0; i < firstRun.Count; i++)
+                Assert.Equal(firstRun.Definitions.Count, secondRun.Definitions.Count);
+                for (int i = 0; i < firstRun.Definitions.Count; i++)
                 {
-                    Assert.Equal(firstRun[i].Points, secondRun[i].Points);
+                    Assert.Equal(firstRun.Definitions[i].Value, secondRun.Definitions[i].Value);
                 }
             }
         }
@@ -77,11 +77,11 @@ namespace Rheo.Storage.Test.FileDefinitions
             File.WriteAllBytes(testPath, data);
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(testPath);
+            var result = FileAnalyzer.AnalyzeFile(testPath);
 
             // Assert
             // Should handle patterns at various positions
-            Assert.NotNull(results);
+            Assert.NotEmpty(result.MimeTypes);
         }
 
         [Fact]
@@ -92,10 +92,10 @@ namespace Rheo.Storage.Test.FileDefinitions
             File.WriteAllBytes(shortPath, [0x42]); // Single byte
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(shortPath);
+            var result = FileAnalyzer.AnalyzeFile(shortPath);
 
             // Assert
-            Assert.NotNull(results); // Should not throw
+            Assert.NotEmpty(result.MimeTypes); // Should not throw
         }
 
         [Fact]
@@ -107,12 +107,12 @@ namespace Rheo.Storage.Test.FileDefinitions
             File.WriteAllBytes(unknownPath, randomData);
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(unknownPath);
+            var result = FileAnalyzer.AnalyzeFile(unknownPath);
 
             // Assert
             // With catch-all removed, unknown files should return empty or very few results
             // This validates your decision to remove catch-all logic
-            Assert.True(results.Count == 0 || results.All(r => r.Points > 0),
+            Assert.True(result.Definitions.Count == 0 || result.Definitions.All(r => r.Value > 0),
                 "Results should either be empty or have positive points (no catch-all guesses)");
         }
 

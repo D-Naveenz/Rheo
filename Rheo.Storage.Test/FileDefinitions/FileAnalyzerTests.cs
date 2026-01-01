@@ -19,10 +19,10 @@ namespace Rheo.Storage.Test.FileDefinitions
             var nonExistentPath = Path.Combine(TestDir.FullPath, "nonexistent.bin");
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(nonExistentPath);
+            var result = FileAnalyzer.AnalyzeFile(nonExistentPath);
 
             // Assert
-            Assert.Empty(results);
+            Assert.Empty(result.Definitions);
         }
 
         [Fact]
@@ -33,10 +33,10 @@ namespace Rheo.Storage.Test.FileDefinitions
             File.WriteAllBytes(emptyFilePath, []);
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(emptyFilePath);
+            var result = FileAnalyzer.AnalyzeFile(emptyFilePath);
 
             // Assert
-            Assert.Empty(results);
+            Assert.Empty(result.Definitions);
         }
 
         [Fact]
@@ -49,16 +49,15 @@ namespace Rheo.Storage.Test.FileDefinitions
                 );
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(testFile.FullPath);
+            var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
 
             // Assert
-            Assert.NotEmpty(results);
-            
+            Assert.NotEmpty(result.Definitions);
+
             // Text files should have at least one match
-            var topResult = results.First();
-            Assert.NotNull(topResult.Definition);
-            Assert.True(topResult.Points > 0);
-            Assert.True(topResult.Confidence > 0);
+            var topResult = result.Definitions.First();
+            Assert.NotNull(topResult.Subject);
+            Assert.True(topResult.Value > 0);
         }
 
         [Fact]
@@ -71,17 +70,17 @@ namespace Rheo.Storage.Test.FileDefinitions
                 );
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(testFile.FullPath);
+            var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
 
             // Assert
-            Assert.NotEmpty(results);
+            Assert.NotEmpty(result.Definitions);
             
-            var topResult = results.First();
+            var topResult = result.Extensions.First();
             
             // PNG files have signature: 89 50 4E 47 0D 0A 1A 0A
-            Assert.NotNull(topResult.Definition);
-            Assert.Contains("png", topResult.Definition.Extensions, StringComparer.OrdinalIgnoreCase);
-            Assert.True(topResult.Confidence > 50, "PNG should have high confidence due to strong signature");
+            Assert.NotNull(topResult.Subject);
+            Assert.Contains("png", topResult.Subject, StringComparison.OrdinalIgnoreCase);
+            Assert.True(topResult.Value > 50, "PNG should have high confidence due to strong signature");
         }
 
         [Fact]
@@ -94,14 +93,14 @@ namespace Rheo.Storage.Test.FileDefinitions
                 );
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(testFile.FullPath);
+            var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
 
             // Assert
-            Assert.NotEmpty(results);
+            Assert.NotEmpty(result.Definitions);
             
-            var topResult = results.First();
-            Assert.NotNull(topResult.Definition);
-            Assert.True(topResult.Points > 0);
+            var topResult = result.Definitions.First();
+            Assert.NotNull(topResult.Subject);
+            Assert.True(topResult.Value > 0);
         }
 
         [Fact]
@@ -114,14 +113,14 @@ namespace Rheo.Storage.Test.FileDefinitions
                 );
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(testFile.FullPath);
+            var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
 
             // Assert
-            Assert.NotEmpty(results);
+            Assert.NotEmpty(result.Definitions);
             
-            var topResult = results.First();
-            Assert.NotNull(topResult.Definition);
-            Assert.True(topResult.Points > 0);
+            var topResult = result.Definitions.First();
+            Assert.NotNull(topResult.Subject);
+            Assert.True(topResult.Value > 0);
         }
 
         [Fact]
@@ -134,14 +133,15 @@ namespace Rheo.Storage.Test.FileDefinitions
                 );
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(testFile.FullPath);
+            var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
 
             // Assert
-            if (results.Count > 1)
+            var defList = result.Definitions.ToList();
+            if (defList.Count > 1)
             {
-                for (int i = 0; i < results.Count - 1; i++)
+                for (int i = 0; i < defList.Count - 1; i++)
                 {
-                    Assert.True(results[i].Points >= results[i + 1].Points,
+                    Assert.True(defList[i].Value >= defList[i + 1].Value,
                         "Results should be ordered by points in descending order");
                 }
             }
@@ -157,12 +157,13 @@ namespace Rheo.Storage.Test.FileDefinitions
                 );
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(testFile.FullPath);
+            var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
 
             // Assert
-            if (results.Count > 0)
+            var defList = result.Definitions.ToList();
+            if (defList.Count > 0)
             {
-                var totalConfidence = results.Sum(r => r.Confidence);
+                var totalConfidence = defList.Sum(r => r.Value);
                 Assert.True(Math.Abs(totalConfidence - 100.0) < 0.01,
                     $"Total confidence should be ~100%, but was {totalConfidence}%");
             }
@@ -178,15 +179,15 @@ namespace Rheo.Storage.Test.FileDefinitions
                 );
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(testFile.FullPath, checkStrings: false);
+            var result = FileAnalyzer.AnalyzeFile(testFile.FullPath, checkStrings: false);
 
             // Assert
-            Assert.NotEmpty(results);
+            Assert.NotEmpty(result.Definitions);
             
             // Results might differ from string-enabled analysis, but should still work
-            var topResult = results.First();
-            Assert.NotNull(topResult.Definition);
-            Assert.True(topResult.Points > 0);
+            var topResult = result.Definitions.First();
+            Assert.NotNull(topResult.Subject);
+            Assert.True(topResult.Value > 0);
         }
 
         [Fact]
@@ -198,17 +199,17 @@ namespace Rheo.Storage.Test.FileDefinitions
             File.WriteAllBytes(zipPath, zipSignature);
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(zipPath);
+            var result = FileAnalyzer.AnalyzeFile(zipPath);
 
             // Assert
-            Assert.NotEmpty(results);
+            Assert.NotEmpty(result.Definitions);
             
-            var topResult = results.First();
-            Assert.NotNull(topResult.Definition);
+            var topResult = result.Definitions.First();
+            Assert.NotNull(topResult.Subject);
             
             // Should detect as ZIP-based format
             Assert.True(
-                topResult.Definition.Extensions.Any(ext => 
+                topResult.Subject.Extensions.Any(ext => 
                     ext.Equals("zip", StringComparison.OrdinalIgnoreCase) ||
                     ext.Equals("jar", StringComparison.OrdinalIgnoreCase) ||
                     ext.Equals("docx", StringComparison.OrdinalIgnoreCase)),
@@ -224,12 +225,12 @@ namespace Rheo.Storage.Test.FileDefinitions
             File.WriteAllBytes(customPath, customData);
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(customPath);
+            var result = FileAnalyzer.AnalyzeFile(customPath);
 
             // Assert
             // Custom patterns might not match any known definitions
             // This test validates that the analyzer handles unknown patterns gracefully
-            Assert.NotNull(results); // Should return empty list, not throw
+            Assert.NotNull(result); // Should return empty list, not throw
         }
 
         [Theory]
@@ -247,20 +248,19 @@ namespace Rheo.Storage.Test.FileDefinitions
                 );
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(testFile.FullPath);
+            var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
 
             // Assert
             // All valid files should return some analysis (even if empty for unknown types)
-            Assert.NotNull(results);
+            Assert.NotNull(result);
             
-            if (results.Count != 0)
+            if (result.Definitions.Count != 0)
             {
                 // If results exist, validate their structure
-                foreach (var result in results)
+                foreach (var confidence in result.Definitions)
                 {
-                    Assert.NotNull(result.Definition);
-                    Assert.True(result.Points >= 0);
-                    Assert.True(result.Confidence >= 0 && result.Confidence <= 100);
+                    Assert.NotNull(confidence.Subject);
+                    Assert.True(confidence.Value >= 0 && confidence.Value <= 100);
                 }
             }
         }
@@ -275,15 +275,15 @@ namespace Rheo.Storage.Test.FileDefinitions
                 );
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(testFile.FullPath);
+            var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
 
             // Assert
-            if (results.Count > 1)
+            if (result.Definitions.Count > 1)
             {
-                var topResult = results.First();
-                foreach (var otherResult in results.Skip(1))
+                var topResult = result.Definitions.First();
+                foreach (var otherResult in result.Definitions.Skip(1))
                 {
-                    Assert.True(topResult.Confidence >= otherResult.Confidence,
+                    Assert.True(topResult.Value >= otherResult.Value,
                         "Top result should have highest confidence");
                 }
             }
@@ -303,13 +303,13 @@ namespace Rheo.Storage.Test.FileDefinitions
             File.WriteAllBytes(largePath, largeData);
 
             // Act
-            var results = FileAnalyzer.AnalyzeFile(largePath);
+            var result = FileAnalyzer.AnalyzeFile(largePath);
 
             // Assert
-            Assert.NotEmpty(results);
+            Assert.NotEmpty(result.Extensions);
             
-            var topResult = results.First();
-            Assert.Contains("png", topResult.Definition.Extensions, StringComparer.OrdinalIgnoreCase);
+            var topResult = result.Extensions.First();
+            Assert.Contains("png", topResult.Subject, StringComparison.OrdinalIgnoreCase);
         }
     }
 }
