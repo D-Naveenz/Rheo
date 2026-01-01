@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <Folder Include="Assets\" />
+    <Folder Include="FileDefinition\Models\Result\" />
   </ItemGroup>
 
   <ItemGroup>

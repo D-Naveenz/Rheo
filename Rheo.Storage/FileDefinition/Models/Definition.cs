@@ -1,6 +1,6 @@
 ﻿using MessagePack;
 
-namespace Rheo.Storage.MIME.Models
+namespace Rheo.Storage.FileDefinition.Models
 {
     /// <summary>
     /// Represents a type definition that includes metadata such as file type, extension, MIME type, and additional

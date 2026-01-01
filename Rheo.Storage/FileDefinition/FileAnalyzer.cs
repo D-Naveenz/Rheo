@@ -1,6 +1,6 @@
-using Rheo.Storage.MIME.Models;
+using Rheo.Storage.FileDefinition.Models;
 
-namespace Rheo.Storage.MIME
+namespace Rheo.Storage.FileDefinition
 {
     /// <summary>
     /// Provides static methods for analyzing files and identifying candidate definitions based on file header patterns
@@ -78,7 +78,7 @@ namespace Rheo.Storage.MIME
             // Calculate confidence percentages
             foreach (var result in results)
             {
-                result.Confidence = totalPoints > 0 ? (result.Points * 100.0) / totalPoints : 0;
+                result.Confidence = totalPoints > 0 ? result.Points * 100.0 / totalPoints : 0;
             }
 
             return [.. results.OrderByDescending(r => r.Points)];

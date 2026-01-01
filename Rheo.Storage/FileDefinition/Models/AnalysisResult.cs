@@ -1,4 +1,4 @@
-﻿namespace Rheo.Storage.MIME.Models
+﻿namespace Rheo.Storage.FileDefinition.Models
 {
     public class AnalysisResult
     {

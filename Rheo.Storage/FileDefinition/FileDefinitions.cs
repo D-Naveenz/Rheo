@@ -1,8 +1,8 @@
 ﻿using MessagePack;
-using Rheo.Storage.MIME.Models;
+using Rheo.Storage.FileDefinition.Models;
 using Rheo.Storage.Properties;
 
-namespace Rheo.Storage.MIME
+namespace Rheo.Storage.FileDefinition
 {
     internal class FileDefinitions
     {

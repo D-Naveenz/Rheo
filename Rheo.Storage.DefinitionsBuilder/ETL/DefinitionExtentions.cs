@@ -1,4 +1,4 @@
-﻿using Rheo.Storage.MIME.Models;
+﻿using Rheo.Storage.FileDefinition.Models;
 
 namespace Rheo.Storage.DefinitionsBuilder.ETL
 {

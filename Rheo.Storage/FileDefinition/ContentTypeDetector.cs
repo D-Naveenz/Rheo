@@ -1,7 +1,7 @@
-using Rheo.Storage.MIME.Models;
+using Rheo.Storage.FileDefinition.Models;
 using System.Text;
 
-namespace Rheo.Storage.MIME
+namespace Rheo.Storage.FileDefinition
 {
     /// <summary>
     /// Provides methods for detecting content types and distinguishing between text and binary files.
@@ -120,7 +120,7 @@ namespace Rheo.Storage.MIME
             }
 
             // If more than threshold percentage are null bytes, it's binary
-            double nullPercentage = (nullBytes * 100.0) / buffer.Length;
+            double nullPercentage = nullBytes * 100.0 / buffer.Length;
             if (nullPercentage > NULL_BYTE_THRESHOLD_PERCENTAGE)
                 return false;
 
@@ -136,7 +136,7 @@ namespace Rheo.Storage.MIME
             }
 
             // If mostly printable characters, consider it text
-            double printablePercentage = ((printableChars + extendedAscii) * 100.0) / buffer.Length;
+            double printablePercentage = (printableChars + extendedAscii) * 100.0 / buffer.Length;
             return printablePercentage > 75;
         }
 

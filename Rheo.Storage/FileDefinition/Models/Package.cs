@@ -1,7 +1,7 @@
 ﻿using MessagePack;
 using System.Text.Json.Serialization;
 
-namespace Rheo.Storage.MIME.Models
+namespace Rheo.Storage.FileDefinition.Models
 {
     [MessagePackObject]
     public partial class Package
