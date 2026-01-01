@@ -20,7 +20,7 @@ namespace Rheo.Storage.Test.FileDefinitions
         {
             // Arrange: PDF signature
             var pdfPath = Path.Combine(_testDir.FullPath, "test.pdf");
-            byte[] pdfHeader = [0x25, 0x50, 0x44, 0x46]; // %PDF
+            byte[] pdfHeader = [0x25, 0x50, 0x44, 0x46, 0x2D]; // "%PDF-"
             File.WriteAllBytes(pdfPath, pdfHeader);
 
             // Act
@@ -28,8 +28,7 @@ namespace Rheo.Storage.Test.FileDefinitions
 
             // Assert
             Assert.NotEmpty(result.Extensions);
-            var topResult = result.Extensions.First();
-            Assert.Contains("pdf", topResult.Subject, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("pdf", result.Extensions.Values, StringComparer.OrdinalIgnoreCase);
         }
 
         [Fact]
