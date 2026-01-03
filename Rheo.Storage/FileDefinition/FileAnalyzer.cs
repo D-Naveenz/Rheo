@@ -62,6 +62,49 @@ namespace Rheo.Storage.FileDefinition
             return result;
         }
 
+        /// <summary>
+        /// Analyzes the provided file stream to identify its content type and returns the analysis result.
+        /// </summary>
+        /// <remarks>The method reads the initial portion of the stream to determine candidate content
+        /// type definitions. If no known definitions are matched, a fallback definition is provided based on the file's
+        /// content. The stream is not closed or disposed by this method.</remarks>
+        /// <param name="stream">The file stream to analyze. The stream must be readable and positioned at the beginning of the file.</param>
+        /// <param name="checkStrings">true to perform additional string-based checks for content type detection; otherwise, false. The default is
+        /// true.</param>
+        /// <returns>An AnalysisResult containing the detected content type definitions and associated confidence scores. If the
+        /// stream is empty, the result will contain no definitions.</returns>
+        public static AnalysisResult AnalyzeStream(FileStream stream, bool checkStrings = true)
+        {
+            if (stream.Length == 0)
+                return new AnalysisResult();
+
+            // Read file header
+            byte[] headerBuffer = ReadFileHeader(stream, SCAN_WINDOW_SIZE);
+            
+            // Get candidate definitions
+            var candidateDefinitions = GetCandidateDefinitions(headerBuffer);
+            
+            // Score each candidate
+            var result = new AnalysisResult();
+            foreach (var definition in candidateDefinitions)
+            {
+                int points = ScoreDefinition(definition, headerBuffer, stream, checkStrings);
+                
+                if (points > 0)
+                {
+                    result.Definitions.Push(definition, points);
+                }
+            }
+            // Handle case where no candidates matched but header is non-empty
+            if (headerBuffer.Length > 0 && result.Definitions.Count == 0)
+            {
+                // Use content type detector to determine if the file is text or binary
+                var fallbackDefinition = ContentTypeDetector.CreateFallbackDefinition(headerBuffer, stream.Name);
+                result.Definitions.Push(fallbackDefinition, 100);
+            }
+            return result;
+        }
+
         private static byte[] ReadFileHeader(FileInfo fileInfo, int maxSize)
         {
             if (fileInfo.Length == 0)
@@ -74,6 +117,23 @@ namespace Rheo.Storage.FileDefinition
 
             using var fileStream = fileInfo.OpenRead();
             fileStream.ReadExactly(buffer, 0, size);
+            
+            // Trim trailing null bytes to avoid false pattern matches
+            return TrimTrailingNullBytes(buffer);
+        }
+
+        private static byte[] ReadFileHeader(FileStream stream, int maxSize)
+        {
+            if (stream.Length == 0)
+                return [];
+
+            // Create buffer and read file header
+            var fileLength = stream.Length;
+            int size = (int)Math.Min(fileLength, maxSize);
+            byte[] buffer = new byte[size];
+
+            stream.Seek(0, SeekOrigin.Begin);
+            stream.ReadExactly(buffer, 0, size);
             
             // Trim trailing null bytes to avoid false pattern matches
             return TrimTrailingNullBytes(buffer);
@@ -200,6 +260,43 @@ namespace Rheo.Storage.FileDefinition
                 }
             }
 
+            return points;
+        }
+
+        private static int ScoreDefinition(Definition definition, byte[] headerBuffer, FileStream stream, bool checkStrings)
+        {
+            int points = 0;
+            // Score patterns
+            foreach (var pattern in definition.Signature.Patterns)
+            {
+                if (pattern.Position < headerBuffer.Length &&
+                    MatchesPattern(headerBuffer, pattern.Position, pattern.Data))
+                {
+                    // Weight by position and length
+                    int weight = pattern.Position == 0 ? 1000 : 100;
+                    points += pattern.Data.Length * weight;
+                }
+                else
+                {
+                    // Pattern mismatch - this definition is invalid
+                    return 0;
+                }
+            }
+            // Score strings if enabled
+            if (checkStrings && points > 0 && definition.Signature.Strings.Count > 0)
+            {
+                stream.Seek(0, SeekOrigin.Begin);
+                byte[] fileBuffer = new byte[stream.Length];
+                stream.ReadExactly(fileBuffer, 0, fileBuffer.Length);
+                
+                foreach (var stringBytes in definition.Signature.Strings)
+                {
+                    if (ContainsSequence(fileBuffer, stringBytes))
+                    {
+                        points += stringBytes.Length * 500;
+                    }
+                }
+            }
             return points;
         }
 

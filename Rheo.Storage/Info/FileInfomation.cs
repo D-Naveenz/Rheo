@@ -1,148 +1,146 @@
-﻿using MimeDetective;
-using MimeDetective.Engine;
-using Rheo.Storage.Contracts;
-using System.Collections.Immutable;
-using System.Diagnostics;
+﻿using Rheo.Storage.Contracts;
+using Rheo.Storage.FileDefinition;
+using Rheo.Storage.FileDefinition.Models.Result;
 
 namespace Rheo.Storage.Info
 {
     public class FileInfomation : IStorageInformation
     {
-        private static readonly IContentInspector _inspector;
-
         private readonly string _filePath;
-        private readonly FileInfo _systemFileInfo;
+        private readonly FileStream _stream;
 
-        static FileInfomation()
-        {
-            _inspector = new ContentInspectorBuilder()
-            {
-                Definitions = new MimeDetective.Definitions.CondensedBuilder()
-                {
-                    UsageType = MimeDetective.Definitions.Licensing.UsageType.PersonalNonCommercial
-                }.Build()
-            }.Build();
-        }
+        private readonly TaskCompletionSource<AnalysisResult> _analysisTaskAwaiter;
+        private readonly Lazy<AnalysisResult> _identificationReportLazy;
 
-        public FileInfomation(string fullPath)
+        public FileInfomation(FileStream stream)
         {
-            if (!File.Exists(fullPath))
+            _filePath = stream.Name;
+            _stream = stream;
+
+            // Validate the stream
+            if (!stream.CanRead)
             {
-                throw new FileNotFoundException($"The file '{fullPath}' does not exist.");
+                throw new ArgumentException("The provided stream must be readable.", nameof(stream));
             }
 
-            _filePath = fullPath;
-            _systemFileInfo = new FileInfo(fullPath);
-
-            if (string.IsNullOrWhiteSpace(TypeName))
+            // Initialize the task completion source
+            _analysisTaskAwaiter = new TaskCompletionSource<AnalysisResult>();
+            // Start the analysis in a background task
+            Task.Run(() =>
             {
-                // Create file description from the MIME type
-                var context = MimeType.Split('/').FirstOrDefault();
-                TypeName = context switch
+                try
                 {
-                    "text" => "Text File",
-                    "image" => "Image File",
-                    "video" => "Video File",
-                    "audio" => "Audio File",
-                    "application" => GetApplicationDescription(),
-                    _ => "Unknown File" // Placeholder to avoid unnecessary assignment warning.
-                };
+                    var report = FileAnalyzer.AnalyzeStream(_stream);
+                    _analysisTaskAwaiter.SetResult(report);
+                }
+                catch (Exception ex)
+                {
+                    _analysisTaskAwaiter.SetException(ex);
+                }
+            });
+            _identificationReportLazy = new Lazy<AnalysisResult>(() => _analysisTaskAwaiter.Task.GetAwaiter().GetResult());
+        }
+
+        #region Properties: Core Identity
+        /// <inheritdoc/>
+        public string DisplayName => Path.GetFileNameWithoutExtension(_filePath);
+
+        /// <inheritdoc/>
+        public string TypeName
+        {
+            get
+            {
+                var definition = _identificationReportLazy.Value.Definitions.FirstOrDefault().Subject;
+                return definition?.FileType ?? "Unknown";
             }
         }
 
         /// <summary>
-        /// Gets the file extension, including the leading period (e.g., ".txt").
+        /// The MIME (Multipurpose Internet Mail Extensions) type of the storage. For example, a music file might have the "audio/mpeg" MIME type.
         /// </summary>
-        public string Extension
-        {
-            get
-            {
-                if (TryGetTrueExtention(out string ext))
-                {
-                    return '.' + ext;
-                }
-
-                return _systemFileInfo.Extension;
-            }
-        }
-
-        public override string MimeType
-        {
-            get
-            {
-                ImmutableArray<MimeTypeMatch> results;
-                results = _inspector.Inspect(_filePath).ByMimeType();
-                return results.FirstOrDefault()?.MimeType.ToLower() ?? "application/octet-stream"; // Default MIME type
-            }
-        }
-
-        public bool IsBinaryFile(int sampleSize = 4096)
-        {
-            var buffer = new byte[sampleSize];
-
-            try
-            {
-                using var stream = new FileStream(_filePath, FileMode.Open, FileAccess.Read);
-                int bytesRead = stream.Read(buffer, 0, sampleSize);
-                for (int i = 0; i < bytesRead; i++)
-                {
-                    // Check for non-printable ASCII characters (excluding common control characters like \n, \r, \t)
-                    if (buffer[i] > 0 && buffer[i] < 32 && buffer[i] != 9 && buffer[i] != 10 && buffer[i] != 13)
-                    {
-                        return true;
-                    }
-                }
-            }
-            catch (IOException)
-            {
-                return false; // Assume text if we can't read the file
-            }
-
-            return false; // Likely text (based on sample)
-        }
+        public Confidence<string> MimeType => _identificationReportLazy.Value.MimeTypes.FirstOrDefault();
 
         /// <summary>
-        /// Attempts to retrieve the true file extension of the file specified by the current file path.
+        /// The file extension (including the dot), if available, as determined by the file name or path.
         /// </summary>
-        /// <remarks>This method checks if the file exists at the current file path and inspects its
-        /// metadata to determine the true file extension. If the file does not exist or the extension cannot be
-        /// determined, the method returns <see langword="false"/>.</remarks>
-        /// <param name="extention">When this method returns, contains the true file extension in lowercase and without the leading dot '.' if the operation succeeds;
-        /// otherwise, an empty string. This parameter is passed uninitialized.</param>
-        /// <returns><see langword="true"/> if the true file extension is successfully retrieved; otherwise, <see
-        /// langword="false"/>.</returns>
-        public bool TryGetTrueExtention(out string extention)
-        {
-            extention = string.Empty;
+        public string? Extension => Path.GetExtension(_filePath);
 
-            var results = _inspector.Inspect(_filePath).ByFileExtension();
-            var ext = results.FirstOrDefault()?.Extension;
-            if (!string.IsNullOrEmpty(ext))
-            {
-                extention = ext.ToLower();
-                return true;
-            }
+        /// <summary>
+        /// The actual extension determined by file content analysis.
+        /// </summary>
+        public Confidence<string> ActualExtension => _identificationReportLazy.Value.Extensions.FirstOrDefault();
 
-            return false;
-        }
+        /// <summary>
+        /// The result of file type analysis, including detected definitions, extensions, and MIME types.
+        /// </summary>
+        public AnalysisResult IdentificationReport => _identificationReportLazy.Value;
 
-        private string GetApplicationDescription()
-        {
-            // Attempt to get a more specific description of the specific application
-            try
-            {
-                FileVersionInfo versionInfo = FileVersionInfo.GetVersionInfo(_filePath);
-                if (!string.IsNullOrWhiteSpace(versionInfo.FileDescription))
-                {
-                    return versionInfo.FileDescription;
-                }
-            }
-            catch (FileNotFoundException)
-            {
-                return "Unknown File";
-            }
-            
-            return "Application File";
-        }
+        #endregion
+
+        #region Properties: Attributes (FileAttributes enum)
+        /// <inheritdoc/>
+        public FileAttributes Attributes => throw new NotImplementedException();
+
+        /// <inheritdoc/>
+        public bool IsReadOnly => Attributes.HasFlag(FileAttributes.ReadOnly);
+
+        /// <inheritdoc/>
+        public bool IsHidden => Attributes.HasFlag(FileAttributes.Hidden);
+
+        /// <inheritdoc/>
+        public bool IsSystem => Attributes.HasFlag(FileAttributes.System);
+
+        /// <inheritdoc/>
+        public bool IsTemporary => Attributes.HasFlag(FileAttributes.Temporary);
+
+        #endregion
+
+        #region Properties: Size
+        /// <inheritdoc/>
+        public ulong Size => throw new NotImplementedException();
+
+        /// <inheritdoc/>
+        public string FormattedSize => throw new NotImplementedException();
+
+        #endregion
+
+        #region Properties: Timestamps
+        /// <inheritdoc/>
+        public DateTime CreationTime => throw new NotImplementedException();
+
+        /// <inheritdoc/>
+        public DateTime LastWriteTime => throw new NotImplementedException();
+
+        /// <inheritdoc/>
+        public DateTime LastAccessTime => throw new NotImplementedException();
+
+        #endregion
+
+        #region Properties: Links & Targets
+        /// <inheritdoc/>
+        public bool IsSymbolicLink => throw new NotImplementedException();
+
+        /// <inheritdoc/>
+        public string? LinkTarget => throw new NotImplementedException();
+
+        #endregion
+
+        #region Properties: Platform-Specific (optional/nullable)
+        /// <inheritdoc/>
+        public string? OwnerSid => throw new NotImplementedException();
+
+        /// <inheritdoc/>
+        public nint? IconHandle => throw new NotImplementedException();
+
+        /// <inheritdoc/>
+        public uint? OwnerId => throw new NotImplementedException();
+
+        /// <inheritdoc/>
+        public uint? GroupId => throw new NotImplementedException();
+
+        /// <inheritdoc/>
+        public uint? Mode => throw new NotImplementedException();
+
+        #endregion
     }
 }

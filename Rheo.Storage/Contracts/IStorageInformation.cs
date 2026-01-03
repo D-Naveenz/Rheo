@@ -1,6 +1,4 @@
-﻿using Rheo.Storage.FileDefinition.Models.Result;
-
-namespace Rheo.Storage.Contracts
+﻿namespace Rheo.Storage.Contracts
 {
     /// <summary>
     /// Provides detailed information about a storage object, such as a file or directory, including identity, attributes, size, timestamps, links, and platform-specific metadata.
@@ -17,26 +15,6 @@ namespace Rheo.Storage.Contracts
         /// The user-friendly description of the type. This is typically a description of the storage type (e.g., "Text Document").
         /// </summary>
         string TypeName { get; }
-
-        /// <summary>
-        /// The MIME (Multipurpose Internet Mail Extensions) type of the storage. For example, a music file might have the "audio/mpeg" MIME type.
-        /// </summary>
-        string MimeType { get; }
-
-        /// <summary>
-        /// The file extension (including the dot), if available, as determined by the file name or path.
-        /// </summary>
-        string? Extension { get; }
-
-        /// <summary>
-        /// The actual extension determined by file content analysis, if different from the file name extension.
-        /// </summary>
-        string? ActualExtension { get; }
-
-        /// <summary>
-        /// The result of file type analysis, including detected definitions, extensions, and MIME types.
-        /// </summary>
-        AnalysisResult IdentificationReport { get; }
 
         #endregion
 
