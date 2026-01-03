@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <Authors>Naveen Dharmathunga</Authors>
-    <Version>0.1.2-beta.3</Version>
+    <Version>0.4.1</Version>
     <Copyright>Copyright (c) 2025 Naveen Dharmathunga, All rights reserved.</Copyright>
     <RepositoryUrl>https://github.com/D-Naveenz/Rheo</RepositoryUrl>
   </PropertyGroup>

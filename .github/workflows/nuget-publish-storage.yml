@@ -32,7 +32,7 @@ jobs:
       run: dotnet restore ${{ env.Solution_Name }}
 
     - name: Build solution
-      run: dotnet build ${{ env.Solution_Name }} --configuration Release --no-restore
+      run: dotnet build ${{ env.Solution_Name }} --configuration Release
 
     - name: Run tests
       run: dotnet test ${{ env.Test_Project_Path }} --configuration Release --no-build --verbosity normal
