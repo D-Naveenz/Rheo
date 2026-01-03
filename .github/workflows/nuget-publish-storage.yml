@@ -14,7 +14,7 @@ jobs:
 
     env:
       Solution_Name: Rheo.sln
-      DefinitionsBuilder_Project_Path: Rheo.Storage. DefinitionsBuilder\Rheo.Storage.DefinitionsBuilder.csproj
+      DefinitionsBuilder_Project_Path: Rheo.Storage.DefinitionsBuilder\Rheo.Storage.DefinitionsBuilder.csproj
       Storage_Project_Path: Rheo.Storage\Rheo.Storage.csproj
       Test_Project_Path: Rheo.Test\Rheo.Test.csproj
 
