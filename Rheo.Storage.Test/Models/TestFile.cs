@@ -9,7 +9,7 @@ namespace Rheo.Storage.Test.Models
     /// <remarks>A <see cref="TestFile"/> instance encapsulates a file created for testing purposes, with
     /// support for different resource types such as text, images, binary data, documents, and videos. It maintains a
     /// collection of storage records and provides metadata such as the timestamp of the last record.</remarks>
-    public class TestFile(string filePath) : FileController(filePath, false)
+    public class TestFile(string filePath) : FileObject(filePath, false)
     {
         public ResourceType ResourceType { get; init; } = ResourceType.Unknown;
         public TestDirectory TestDirectory { get; init; } = null!;

@@ -1,5 +1,4 @@
 ﻿using Rheo.Storage.Contracts;
-using System.Text;
 
 namespace Rheo.Storage
 {
@@ -15,8 +14,17 @@ namespace Rheo.Storage
         private const uint MIN_BUFFER_SIZE = 1024; // 1KB
         private const uint MAX_BUFFER_SIZE = 16 * 1024 * 1024; // 16MB
 
+        protected IStorageInformation _informationInternal;
+
         private readonly Lock _infoLock = new();
 
+        /// <summary>
+        /// Initializes a new instance of the StorageObject class for the specified file or path.
+        /// </summary>
+        /// <remarks>If the specified path does not exist, the constructor creates the necessary parent
+        /// directory. This ensures that the storage object is always associated with a valid file system
+        /// location.</remarks>
+        /// <param name="fileNameOrPath">The file name or full path to associate with this storage object. Cannot be null or empty.</param>
         public StorageObject(string fileNameOrPath)
         {
             FullPath = GetValidPath(fileNameOrPath);
@@ -29,13 +37,12 @@ namespace Rheo.Storage
 
             // Initialize event listners
             StorageChanged += StorageObject_StorageChanged;
+
+            // Load the information
+            _informationInternal = CrateNewInformationInstance()!;
         }
 
         #region Properties
-        /// <summary>
-        /// Gets metadata information about the storage object, such as size, attributes, and timestamps.
-        /// </summary>
-        public abstract IStorageInformation? Information { get; protected set; }
 
         /// <summary>
         /// Gets the name of the storage object, typically the file or directory name.
@@ -129,12 +136,12 @@ namespace Rheo.Storage
         /// <inheritdoc/>
         public override string ToString()
         {
-            if (Information is null)
+            if (_informationInternal is null)
             {
                 return $"{Name} | Info: N/A";
             }
 
-            return Information.ToString()!;
+            return _informationInternal.ToString()!;
         }
 
         /// <summary>
@@ -190,42 +197,28 @@ namespace Rheo.Storage
 
             var fullPath = Path.GetFullPath(path);
 
-            //if (assert == AssertAs.File)
-            //{
-            //    // Check the path is point to an existing folder. If yes, the path should be invalid
-            //    if (Directory.Exists(fullPath))
-            //    {
-            //        throw new ArgumentException(
-            //            "The specified path points to an existing directory. Please provide a valid file path, not a directory.",
-            //            nameof(path)
-            //        );
-            //    }
-            //}
-            //else if (assert == AssertAs.Directory)
-            //{
-            //    // Check the path is point to an existing file. If yes, the path should be invalid
-            //    if (File.Exists(fullPath))
-            //    {
-            //        throw new ArgumentException(
-            //            "The specified path points to an existing file. Please provide a valid directory path, not a file.",
-            //            nameof(path)
-            //        );
-            //    }
-            //}
-            //else
-            //{
-            //    throw new ArgumentException("Please select a correct assertion method.", nameof(assert));
-            //}
-
             return fullPath;
         }
 
         /// <summary>
-        /// Creates a new instance of an object that implements the <see cref="IStorageInformation"/> interface.
+        /// Creates a new instance of a storage information object.
         /// </summary>
-        /// <returns>An instance of <see cref="IStorageInformation"/> representing storage information, or <see langword="null"/>
-        /// if no instance can be created.</returns>
-        protected abstract IStorageInformation? CrateNewInformationInstance();
+        /// <remarks>Derived classes must implement this method to provide a concrete instance of <see
+        /// cref="IStorageInformation"/> appropriate for their storage mechanism.</remarks>
+        /// <returns>An <see cref="IStorageInformation"/> instance representing the newly created storage information.</returns>
+        protected abstract IStorageInformation CrateNewInformationInstance();
+
+        /// <summary>
+        /// Raises the StorageChanged event to notify subscribers of changes in the storage state.
+        /// </summary>
+        /// <remarks>Override this method in a derived class to provide custom handling when the storage
+        /// changes. This method is typically called when the storage state is updated and should not be called directly
+        /// by user code.</remarks>
+        /// <param name="e">An object that contains the event data for the storage change.</param>
+        protected virtual void OnStorageChanged(StorageChangedEventArgs e)
+        {
+            StorageChanged?.Invoke(this, e);
+        }
 
         /// <summary>
         /// Handles changes to the underlying storage object by updating the object's path and information as needed.
@@ -250,7 +243,7 @@ namespace Rheo.Storage
                     lock (_infoLock)
                     {
                         // Load the new information
-                        Information = CrateNewInformationInstance();
+                        _informationInternal = CrateNewInformationInstance();
                     }
                 });
             }
@@ -353,13 +346,14 @@ namespace Rheo.Storage
             }
         }
 
+        /// <inheritdoc/>
         public virtual void Dispose()
         {
-            // Dispose of any resources if needed
-            // Example: if (_someResource != null) { _someResource.Dispose(); }
-            // Call the base class Dispose method if applicable
-            base.Dispose();
+            // Clean up event listeners
+            StorageChanged -= StorageObject_StorageChanged;
+            GC.SuppressFinalize(this);
         }
+
         #endregion
     }
 }

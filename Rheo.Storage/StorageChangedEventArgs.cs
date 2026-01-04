@@ -42,8 +42,8 @@
         Modified,
 
         /// <summary>
-        /// The storage object was renamed.
+        /// Indicates whether the item has been relocated, such as moved or renamed.
         /// </summary>
-        Renamed
+        Relocated
     }
 }

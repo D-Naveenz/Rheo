@@ -4,63 +4,72 @@ using System.Diagnostics;
 namespace Rheo.Storage
 {
     /// <summary>
-    /// Provides functionality for managing and interacting with directories in the file system.
+    /// Represents a directory in the file system and provides methods for monitoring, accessing, and manipulating its
+    /// contents asynchronously.
     /// </summary>
-    /// <remarks>The <see cref="DirectoryController"/> class extends <see cref="StorageObject"/> to
-    /// provide directory-specific operations, such as retrieving files, subdirectories, and metadata about the
-    /// directory. It also implements <see cref="IStorageInfoContainer{T}"/> to expose detailed information about the
-    /// directory through the <see cref="Information"/> property. <para> This class supports operations such as copying,
-    /// moving, renaming, and deleting directories, as well as retrieving directory contents and metadata. It ensures
-    /// proper handling of exceptions and provides additional context for error scenarios. </para> <para> Use this class
-    /// when working with directories in a structured and programmatic way, especially when additional metadata or
-    /// advanced operations are required. </para></remarks>
-    public class DirectoryController : StorageObject, IStorageInfoContainer<DirectoryInformation>
+    /// <remarks>A DirectoryObject encapsulates a directory and automatically monitors it and its
+    /// subdirectories for changes, such as file or directory creation, deletion, and attribute modifications. It
+    /// provides methods to retrieve files and subdirectories, as well as to copy, move, rename, or delete the directory
+    /// and its contents. Changes detected in the directory may affect related properties and events. This class is
+    /// intended for use in scenarios where directory monitoring and advanced file system operations are
+    /// required.</remarks>
+    public class DirectoryObject : StorageObject
     {
-        private readonly DirectoryInformation? _storageInfo;
+        private readonly FileSystemWatcher _watcher;
 
-        public DirectoryController(string fileNameOrPath, bool isInfoRequired = true) : base(fileNameOrPath, AssertAs.Directory)
+        /// <summary>
+        /// Initializes a new instance of the DirectoryObject class for the specified directory path and begins
+        /// monitoring the directory for changes.
+        /// </summary>
+        /// <remarks>The created DirectoryObject instance automatically monitors the specified directory
+        /// and its subdirectories for changes, including file and directory creation, deletion, and attribute
+        /// modifications. Changes detected by the watcher may affect properties such as file counts or directory size.
+        /// The monitoring begins immediately upon construction.</remarks>
+        /// <param name="path">The full path to the directory to be represented and monitored. Cannot be null or empty.</param>
+        /// <exception cref="IOException">Thrown if the directory watcher cannot be initialized for the specified path, such as if the path is invalid
+        /// or inaccessible.</exception>
+        public DirectoryObject(string path) : base(path)
         {
-            // Initialize storage information if required
+            path = FullPath; // Ensure base class has processed the path
+
             try
             {
-                if (isInfoRequired)
+                _watcher = new FileSystemWatcher(path)
                 {
-                    _storageInfo = Activator.CreateInstance(typeof(DirectoryInformation), FullPath) as DirectoryInformation;
-                }
+                    NotifyFilter = NotifyFilters.FileName
+                                 | NotifyFilters.DirectoryName 
+                                 | NotifyFilters.Attributes 
+                                 | NotifyFilters.Size 
+                                 | NotifyFilters.LastWrite 
+                                 | NotifyFilters.LastAccess 
+                                 | NotifyFilters.CreationTime 
+                                 | NotifyFilters.Security,
+
+                    IncludeSubdirectories = true,
+                    EnableRaisingEvents = true
+                };
+
+                // Event handlers
+                // We need a file system watcher to monitor changes in the directory.
+                // But we only need to moniter if only affects the directory properties (counts, size, etc.)
+                _watcher.Changed += Watcher_Changed;
+                _watcher.Created += Watcher_Changed;
+                _watcher.Deleted += Watcher_Changed;
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Could not create an instance of type {typeof(DirectoryInformation).FullName}.", ex);
+                throw new IOException($"Failed to initialize FileSystemWatcher for directory at path: {path}", ex);
             }
         }
 
-        public override DateTime CreatedAt => Directory.GetCreationTime(FullPath);
+        /// <summary>
+        /// Gets metadata information about the storage object, such as size, attributes, and timestamps.
+        /// </summary>
+        public DirectoryInformation Information => (DirectoryInformation)_informationInternal;
 
-        public override bool IsAvailable => Directory.Exists(FullPath);
+        /// <inheritdoc/>
+        public override string Name => Path.GetDirectoryName(FullPath)!;
 
-        /// <inheritdoc cref="DirectoryInformation.NoOfFiles"/>/>
-        public int NoOfFiles => Information.NoOfFiles;
-
-        /// <inheritdoc cref="DirectoryInformation.NoOfDirectories"/>/>
-        public int NoOfDirectories => Information.NoOfDirectories;
-
-        public DirectoryInformation Information => _storageInfo ?? throw new InvalidOperationException("Storage information is not available.");
-
-        public string ContentType => Information.MimeType;
-
-        public string? DisplayName => Information.DisplayName;
-
-        public string? DisplayType => Information.TypeName;
-
-        public bool IsReadOnly => Information.AttributeFlags.HasFlag(FileAttributes.ReadOnly);
-
-        public bool IsHidden => Information.AttributeFlags.HasFlag(FileAttributes.Hidden);
-
-        public bool IsSystem => Information.AttributeFlags.HasFlag(FileAttributes.System);
-
-        public bool IsTemporary => Information.AttributeFlags.HasFlag(FileAttributes.Temporary);
-
-        #region Methods
         /// <summary>
         /// Retrieves the file names from the directory represented by this instance, based on the specified search
         /// pattern and search option.
@@ -94,10 +103,10 @@ namespace Rheo.Storage
         /// to locate the file. Ensure that the relative path is valid and points to an existing file within the
         /// directory.</remarks>
         /// <param name="relativePath">The relative path to the file, starting from the current directory. The path must not be rooted.</param>
-        /// <returns>A <see cref="FileController"/> instance representing the file at the specified path.</returns>
+        /// <returns>A <see cref="FileObject"/> instance representing the file at the specified path.</returns>
         /// <exception cref="ArgumentException">Thrown if <paramref name="relativePath"/> is an absolute path.</exception>
         /// <exception cref="FileNotFoundException">Thrown if the file does not exist at the specified relative path.</exception>
-        public FileController GetFile(string relativePath)
+        public FileObject GetFile(string relativePath)
         {
             // Verify that the relativePath is indeed relative
             if (Path.IsPathRooted(relativePath))
@@ -111,7 +120,7 @@ namespace Rheo.Storage
                 throw new FileNotFoundException($"The file '{relativePath}' does not exist in the directory '{FullPath}'.", fullPath);
             }
 
-            return new FileController(fullPath);
+            return new FileObject(fullPath);
         }
 
         /// <summary>
@@ -142,17 +151,17 @@ namespace Rheo.Storage
         }
 
         /// <summary>
-        /// Retrieves a <see cref="DirectoryController"/> representing the directory at the specified relative path.
+        /// Retrieves a <see cref="DirectoryObject"/> representing the directory at the specified relative path.
         /// </summary>
         /// <remarks>This method combines the specified <paramref name="relativePath"/> with the base
         /// directory's full path to locate the target directory. Ensure that the relative path is valid and points to
         /// an existing directory.</remarks>
         /// <param name="relativePath">The relative path to the directory, relative to the base directory represented by this instance. The path
         /// must not be rooted.</param>
-        /// <returns>A <see cref="DirectoryController"/> representing the directory at the specified relative path.</returns>
+        /// <returns>A <see cref="DirectoryObject"/> representing the directory at the specified relative path.</returns>
         /// <exception cref="ArgumentException">Thrown if <paramref name="relativePath"/> is a rooted path.</exception>
         /// <exception cref="DirectoryNotFoundException">Thrown if the directory specified by <paramref name="relativePath"/> does not exist.</exception>
-        public DirectoryController GetDirectory(string relativePath)
+        public DirectoryObject GetDirectory(string relativePath)
         {
             // Verify that the relativePath is indeed relative
             if (Path.IsPathRooted(relativePath))
@@ -164,38 +173,10 @@ namespace Rheo.Storage
             {
                 throw new DirectoryNotFoundException($"The directory '{relativePath}' does not exist in the directory '{FullPath}'.");
             }
-            return new DirectoryController(fullPath);
+            return new DirectoryObject(fullPath);
         }
 
-        public override long GetSize(UOM uom = UOM.KB)
-        {
-            long sizeInBytes = 0;
-            try
-            {
-                // Sum the sizes of all files in the directory and its subdirectories
-                var allFiles = Directory.GetFiles(FullPath, "*", SearchOption.AllDirectories);
-                foreach (var file in allFiles)
-                {
-                    var fileInfo = new FileInfo(file);
-                    sizeInBytes += fileInfo.Length;
-                }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                // Handle the case where access is denied
-                return -1; // or any other value indicating access is denied
-            }
-            return uom switch
-            {
-                UOM.Bytes => sizeInBytes,
-                UOM.KB => sizeInBytes / 1024,
-                UOM.MB => sizeInBytes / (1024 * 1024),
-                UOM.GB => sizeInBytes / (1024 * 1024 * 1024),
-                UOM.TB => sizeInBytes / (1024L * 1024 * 1024 * 1024),
-                _ => sizeInBytes / 1024,
-            };
-        }
-
+        /// <inheritdoc/>
         public override async Task CopyAsync(
             string destination,
             bool overwrite = false,
@@ -209,7 +190,7 @@ namespace Rheo.Storage
             var totalBytes = files.Sum(file => new FileInfo(file).Length);
             long bytesTransferred = 0;
 
-            var bufferSize = BufferSize;
+            var bufferSize = (int)GetBufferSize(Information.Size);
             var stopwatch = Stopwatch.StartNew();
 
             // Create all directories first (including empty ones)
@@ -298,13 +279,23 @@ namespace Rheo.Storage
             {
                 throw new AggregateException("One or more files failed to copy.", exceptions);
             }
+
+            // Raise the Event
+            OnStorageChanged(new(destination, StorageChangeType.Created));
         }
 
+        /// <inheritdoc/>
         public override Task DeleteAsync()
         {
-            return Task.Run(() => Directory.Delete(FullPath, true));
+            var task = Task.Run(() => Directory.Delete(FullPath, true));
+
+            // Raise the Event
+            OnStorageChanged(new(FullPath, StorageChangeType.Deleted));
+
+            return task;
         }
 
+        /// <inheritdoc/>
         public override async Task MoveAsync(
             string destination,
             bool overwrite = false,
@@ -323,7 +314,6 @@ namespace Rheo.Storage
                     Directory.Delete(destination, true);
                 }
                 await Task.Run(() => Directory.Move(FullPath, destination), cancellationToken);
-                Name = Path.GetFileName(destination);
 
                 // Report progress as complete
                 progress?.Report(new StorageProgress
@@ -340,9 +330,11 @@ namespace Rheo.Storage
                 await DeleteAsync();
             }
 
-            Name = Path.GetFileName(destination);
+            // Raise the Event
+            OnStorageChanged(new(destination, StorageChangeType.Relocated));
         }
 
+        /// <inheritdoc/>
         public override async Task RenameAsync(string newName)
         {
             // Validate newName
@@ -367,14 +359,52 @@ namespace Rheo.Storage
             // Perform the rename (move)
             await Task.Run(() => Directory.Move(FullPath, newFullPath));
 
-            // Update internal state
-            Name = newName;
+            // Raise the Event
+            OnStorageChanged(new(newFullPath, StorageChangeType.Relocated));
         }
 
-        public override string ToString()
+        /// <inheritdoc/>
+        public override void Dispose()
         {
-            return Stringify(AssertAs.Directory, DisplayName, DisplayType);
+            // Dispose the FileSystemWatcher
+            _watcher.Dispose();
+
+            base.Dispose();
+            GC.SuppressFinalize(this);
         }
-        #endregion
+
+        /// <inheritdoc/>
+        protected override DirectoryInformation CrateNewInformationInstance()
+        {
+            return new DirectoryInformation(FullPath);
+        }
+
+        /// <summary>
+        /// Validates the specified path and returns its full directory path if it does not point to an existing file.
+        /// </summary>
+        /// <param name="path">The path to validate. Must not refer to an existing file.</param>
+        /// <returns>The full directory path corresponding to the specified path.</returns>
+        /// <exception cref="ArgumentException">Thrown if the specified path points to an existing file.</exception>
+        protected override string GetValidPath(string path)
+        {
+            var fullPath = base.GetValidPath(path);
+
+            // Check the path is point to an existing file. If yes, the path should be invalid
+            if (File.Exists(fullPath))
+            {
+                throw new ArgumentException(
+                    "The specified path points to an existing file. Please provide a valid directory path, not a file.",
+                    nameof(path)
+                );
+            }
+
+            return fullPath;
+        }
+
+        private void Watcher_Changed(object sender, FileSystemEventArgs e)
+        {
+            // Invoke the StorageChanged event to notify subscribers about the change
+            OnStorageChanged(new(FullPath, StorageChangeType.Modified));
+        }
     }
 }

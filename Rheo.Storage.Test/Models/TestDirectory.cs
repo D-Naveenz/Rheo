@@ -12,7 +12,7 @@ namespace Rheo.Storage.Test.Models
     /// identifier.  <para> The <see cref="TestDirectory"/> class is thread-safe for disposal operations and implements 
     /// <see cref="IDisposable"/> to ensure that the directory and its contents are cleaned up when no longer needed.
     /// </para></remarks>
-    public class TestDirectory : DirectoryController, IDisposable
+    public class TestDirectory : DirectoryObject, IDisposable
     {
         private readonly Lock _disposeLock = new();
 
