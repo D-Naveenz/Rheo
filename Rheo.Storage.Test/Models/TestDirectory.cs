@@ -4,26 +4,34 @@ using System.Diagnostics;
 namespace Rheo.Storage.Test.Models
 {
     /// <summary>
-    /// Represents a temporary test directory with a unique name, created in the system's temporary folder.
+    /// Represents a directory used for managing test files and related operations within the testing environment.
     /// </summary>
-    /// <remarks>This class provides functionality for managing a temporary directory, including tracking
-    /// operations  performed on the directory and ensuring proper cleanup when the instance is disposed. The directory 
-    /// is created immediately upon instantiation, and its name is prefixed with "Rheo_" followed by a unique 
-    /// identifier.  <para> The <see cref="TestDirectory"/> class is thread-safe for disposal operations and implements 
-    /// <see cref="IDisposable"/> to ensure that the directory and its contents are cleaned up when no longer needed.
-    /// </para></remarks>
-    public class TestDirectory : DirectoryObject, IDisposable
+    /// <remarks>A TestDirectory provides functionality for creating, tracking, and interacting with
+    /// directories that contain test files. Instances can be marked as temporary and are typically used to isolate test
+    /// artifacts. The class offers methods for creating temporary directories and opening them in the system's file
+    /// browser. Resources associated with the directory are cleaned up upon disposal. Thread safety is ensured during
+    /// disposal operations.</remarks>
+    public class TestDirectory : DirectoryObject
     {
         private readonly Lock _disposeLock = new();
-
-        public new bool IsTemporary { get; init; }
-        public List<TestFile> TestFiles { get; } = [];
 
         private TestDirectory(string storagePath)
             : base(storagePath)
         {
-            IsTemporary = true;
         }
+
+        /// <summary>
+        /// Gets the collection of test files associated with the current instance.
+        /// </summary>
+        /// <remarks>The returned list is read-only; items can be added or removed from the collection,
+        /// but the property itself cannot be reassigned. The collection is empty if no test files have been
+        /// added.</remarks>
+        public List<TestFile> TestFiles { get; } = [];
+
+        /// <summary>
+        /// Gets a value indicating whether the item is marked as temporary.
+        /// </summary>
+        public bool IsTemporary => Information.IsTemporary;
 
         /// <summary>
         /// Creates a temporary test directory with a unique name in the system's temporary folder.
@@ -37,8 +45,10 @@ namespace Rheo.Storage.Test.Models
             return new TestDirectory(tempDir.FullName);
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
+            base.Dispose(); // Base classes handle the unloading of resources
+
             // Clean up the directory and its contents
             // This operation might be executed in a concurrent environment
             lock (_disposeLock)
@@ -59,6 +69,8 @@ namespace Rheo.Storage.Test.Models
                     }
                 }
             }
+
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
