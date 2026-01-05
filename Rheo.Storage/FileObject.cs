@@ -1,68 +1,45 @@
-﻿using Rheo.Storage.Info;
+﻿using Rheo.Storage.Information;
 using System.Diagnostics;
 
 namespace Rheo.Storage
 {
     /// <summary>
-    /// Provides functionality for managing and manipulating files, including operations such as copying, moving,
-    /// renaming, and deleting files.
+    /// Represents a file-based storage object that provides asynchronous operations for copying, moving, renaming, and
+    /// deleting files, as well as access to file metadata.
     /// </summary>
-    /// <remarks>The <see cref="FileController"/> class extends <see cref="StorageController"/> and implements
-    /// <see cref="IStorageInfoContainer{T}"/>  to provide detailed file information and advanced file management
-    /// capabilities. It supports asynchronous operations for file manipulation  and provides properties to access
-    /// metadata such as creation time, file attributes, and MIME type. <para> This class is designed to handle both
-    /// binary and non-binary files and includes mechanisms to retrieve file-specific information  through the <see
-    /// cref="Information"/> property. It also ensures thread-safe operations and supports progress reporting for
-    /// long-running tasks. </para></remarks>
-    public class FileController : StorageController, IStorageInfoContainer<FileInfomation>
+    /// <remarks>FileObject enables manipulation of files on disk with support for progress reporting and
+    /// cancellation in asynchronous operations. It ensures that file paths are validated and that operations such as
+    /// copy and move handle cross-volume scenarios appropriately. Events are raised to notify about storage changes.
+    /// This class is not thread-safe; concurrent access to the same instance should be avoided.</remarks>
+    public class FileObject : StorageObject
     {
-        private readonly FileInfomation? _storageInfo;
-
-        public FileController(string fileNameOrPath, bool isInfoRequired = true) : base(fileNameOrPath, AssertAs.File)
+        /// <summary>
+        /// Initializes a new instance of the FileObject class for the specified file path, creating the file if it does
+        /// not already exist.
+        /// </summary>
+        /// <remarks>If the specified file does not exist, it is created. The constructor does not keep
+        /// the file open after initialization.</remarks>
+        /// <param name="path">The path to the file to be represented by this object. Can be either an absolute or relative path.</param>
+        public FileObject(string path) : base(path)
         {
-            // Initialize storage information if required
-            try
-            {
-                if (isInfoRequired)
-                {
-                    _storageInfo = Activator.CreateInstance(typeof(FileInfomation), FullPath) as FileInfomation;
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Could not create an instance of type {typeof(FileInfomation).FullName}.", ex);
-            }
+            path = FullPath; // Ensure base class has processed the path
+
+            // Ensure the file exists without holding a stream open
+            File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read).Dispose();
+
+            // Load the information
+            _informationInternal = CreateNewInformationInstance();
         }
 
-        public override DateTime CreatedAt => File.GetCreationTime(FullPath);
-
-        /// <inheritdoc cref="FileInfomation.Extension"/>
-        public string? Extension => Information.Extension;
-
-        public override bool IsAvailable => File.Exists(FullPath);
-
         /// <summary>
-        /// Gets a value indicating whether the file is binary.
+        /// Gets metadata information about the storage object, such as size, attributes, and timestamps.
         /// </summary>
-        public bool? IsBinary => Information.IsBinaryFile();
+        public FileInformation Information => (FileInformation)_informationInternal!;
 
-        public FileInfomation Information => _storageInfo ?? throw new InvalidOperationException("Storage information is not available.");
+        /// <inheritdoc/>
+        public override string Name => Path.GetFileName(FullPath);
 
-        public string ContentType => Information.MimeType;
-
-        public string? DisplayName => Information.DisplayName;
-
-        public string? DisplayType => Information.TypeName;
-
-        public bool IsReadOnly => Information.AttributeFlags.HasFlag(FileAttributes.ReadOnly);
-
-        public bool IsHidden => Information.AttributeFlags.HasFlag(FileAttributes.Hidden);
-
-        public bool IsSystem => Information.AttributeFlags.HasFlag(FileAttributes.System);
-
-        public bool IsTemporary => Information.AttributeFlags.HasFlag(FileAttributes.Temporary);
-
-        #region Methods
+        /// <inheritdoc/>
         public override async Task CopyAsync(
             string destination,
             bool overwrite = false,
@@ -71,13 +48,14 @@ namespace Rheo.Storage
             CancellationToken cancellationToken = default)
         {
             ProcessDestinationPath(ref destination, overwrite);
+            var bufferSize = (int)GetBufferSize(Information.Size);
 
             using var sourceStream = new FileStream(
                 FullPath,
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read,
-                BufferSize,
+                bufferSize,
                 true);
 
             using var destStream = new FileStream(
@@ -85,7 +63,7 @@ namespace Rheo.Storage
                 overwrite ? FileMode.Create : FileMode.CreateNew,
                 FileAccess.Write,
                 FileShare.None,
-                BufferSize,
+                bufferSize,
                 true);
 
             long totalBytes = sourceStream.Length;
@@ -95,7 +73,7 @@ namespace Rheo.Storage
             // Use a semaphore to throttle concurrent buffer reads/writes
             using var semaphore = new SemaphoreSlim(maxConcurrent > 0 ? maxConcurrent : 1);
 
-            byte[] buffer = new byte[BufferSize];
+            byte[] buffer = new byte[bufferSize];
             int bytesRead;
 
             while ((bytesRead = await sourceStream.ReadAsync(buffer, cancellationToken)) > 0)
@@ -126,27 +104,26 @@ namespace Rheo.Storage
                 if (cancellationToken.IsCancellationRequested)
                     break;
             }
+
+            // Raise the Event
+            OnStorageChanged(new(destination, StorageChangeType.Created));
         }
 
+        /// <inheritdoc/>
         public override Task DeleteAsync()
         {
-            return Task.Run(() =>
+            var task = Task.Run(() =>
             {
                 File.Delete(FullPath);
             });
+
+            // Raise the Event
+            OnStorageChanged(new(FullPath, StorageChangeType.Deleted));
+
+            return task;
         }
 
-        public override long GetSize(UOM uom = UOM.KB)
-        {
-            if (!File.Exists(FullPath))
-            {
-                return 0;
-            }
-            var sizeInBytes = new FileInfo(FullPath).Length;
-            // Use Math.Pow for correct unit conversion and cast the result to long
-            return (long)(sizeInBytes / Math.Pow(1024, (int)uom));
-        }
-
+        /// <inheritdoc/>
         public override async Task MoveAsync(
             string destination,
             bool overwrite = false,
@@ -183,8 +160,12 @@ namespace Rheo.Storage
                 await CopyAsync(destination, overwrite, maxConcurrent, progress, cancellationToken);
                 await DeleteAsync();
             }
+
+            // Raise the Event
+            OnStorageChanged(new(destination, StorageChangeType.Relocated));
         }
 
+        /// <inheritdoc/>
         public override async Task RenameAsync(string newName)
         {
             // Check if the name is null, empty, or whitespace
@@ -209,19 +190,42 @@ namespace Rheo.Storage
             // Perform the rename (move)
             await Task.Run(() => File.Move(FullPath, newPath));
 
-            // Update internal state
-            Name = newName;
-        }
-
-        public override string ToString()
-        {
-            return Stringify(AssertAs.File, DisplayName, DisplayType);
+            // Raise the Event
+            OnStorageChanged(new(newPath, StorageChangeType.Relocated));
         }
 
         /// <inheritdoc/>
-        /// <exception cref="IOException">Thrown if <paramref name="overwrite"/> is <see langword="false"/> and the file already exists at the
-        /// destination path.</exception>
-        protected override void ProcessDestinationPath(ref string destination, bool overwrite)
+        protected override FileInformation CreateNewInformationInstance()
+        {
+            return new FileInformation(FullPath);
+        }
+
+        /// <summary>
+        /// Validates the specified file path and returns its fully qualified path. Throws an exception if the path
+        /// refers to an existing directory.
+        /// </summary>
+        /// <param name="path">The file path to validate. This should refer to a file, not a directory.</param>
+        /// <returns>A fully qualified file path if the specified path is valid and does not refer to an existing directory.</returns>
+        /// <exception cref="ArgumentException">Thrown if the specified path points to an existing directory.</exception>
+        protected override string GetValidPath(string path)
+        {
+            var fullPath = base.GetValidPath(path);
+
+            // Check the path is point to an existing folder. If yes, the path should be invalid
+            if (Directory.Exists(fullPath))
+            {
+                throw new ArgumentException(
+                    "The specified path points to an existing directory. Please provide a valid file path, not a directory.",
+                    nameof(path)
+                );
+            }
+
+            return fullPath;
+        }
+
+
+        /// <inheritdoc/>
+        protected override void ProcessDestinationPath(ref string destination, bool overwrite = false)
         {
             base.ProcessDestinationPath(ref destination, overwrite);
 
@@ -230,6 +234,5 @@ namespace Rheo.Storage
             if (!overwrite && File.Exists(destination))
                 throw new IOException("File already exists.");
         }
-        #endregion
     }
 }

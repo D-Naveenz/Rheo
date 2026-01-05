@@ -11,25 +11,26 @@
     <RepositoryUrl>https://github.com/D-Naveenz/Rheo</RepositoryUrl>
     <Copyright>Copyright (c) 2025 Naveen Dharmathunga, All rights reserved.</Copyright>
     <Description>Rheo.Storage is a modern, high-performance library for managing files and directories with rich metadata, asynchronous operations, and progress reporting.</Description>
-    <Version>0.4.1-beta.1</Version>
+    <Version>0.5.4-beta.2</Version>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <PackageTags>rheo; mime; magicnumber; extension; type; definition; detection, file, directory, handling, async</PackageTags>
+    <DocumentationFile>$(MSBuildProjectDirectory)\documentation.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="MessagePack" Version="3.1.4" />
-    <PackageReference Include="Mime-Detective" Version="25.8.1" />
-    <PackageReference Include="Mime-Detective.Definitions.Condensed" Version="25.8.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="README.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
+    <PackageReference Include="System.Drawing.Common" Version="10.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Assets\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

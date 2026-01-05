@@ -32,8 +32,8 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore ${{ env.Solution_Name }}
 
-    - name: Build DefinitionsBuilder (generates filedefs.rpkg)
-      run: dotnet build ${{ env.DefinitionsBuilder_Project_Path }} --configuration Release --no-restore
+    # - name: Build DefinitionsBuilder (generates filedefs.rpkg)
+    #   run: dotnet build ${{ env.DefinitionsBuilder_Project_Path }} --configuration Release --no-restore
 
     - name: Build solution
       run: dotnet build ${{ env.Solution_Name }} --configuration Release --no-restore
