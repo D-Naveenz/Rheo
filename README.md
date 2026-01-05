@@ -1,82 +1,103 @@
 # Rheo.Storage
 
-Rheo.Storage is a modern, high-performance .NET 9 library for managing files and directories with rich metadata, asynchronous operations, and progress reporting. It provides a flexible abstraction for storage entities, supporting advanced scenarios such as concurrent file operations, custom storage information, and robust error handling.
+A modern .NET library for file and directory operations with rich metadata, content-based file analysis, and asynchronous I/O operations.
 
 ## Features
 
-- Abstract base class for storage entities (`StorageController<T>`)
-- File management via `FileController` (copy, move, rename, delete)
-- Rich metadata support (size, content type, display name, etc.)
-- Asynchronous operations with cancellation and progress reporting
-- Buffer size optimization for large file transfers
-- Unit of measurement (UOM) support for storage size
-- Extensible storage information via `StorageInfomation` and `FileInfomation`
-- Utility helpers for storage paths (`StoragePaths`)
-- .NET 9 and C# 13 support
+- **Unified Storage Objects**: Work with files and directories through intuitive `FileObject` and `DirectoryObject` classes
+- **Rich Metadata**: Access detailed information including file types, MIME types, sizes, timestamps, and attributes
+- **Content-Based Analysis**: Automatically detect file types based on content, not just extensions
+- **Async Operations**: All I/O operations support async/await with progress reporting and cancellation
+- **Change Monitoring**: Built-in file system watching for directory changes
+- **Cross-Platform**: Works on Windows, Linux, and macOS with platform-specific optimizations
 
-## Getting Started
+## Installation
 
-### Installation
+```bash
+dotnet add package Rheo.Storage
+```
 
-Add a reference to the `Rheo.Storage` project or install via NuGet (if available):
+## Quick Start
 
-### Usage Example
+### Working with Files
+
 ```csharp
 using Rheo.Storage;
 
-// Create a file controller for an existing file
-var fileController = new FileController("example.txt");
+// Create a file object
+var file = new FileObject("document.pdf");
 
-// Get file metadata
-Console.WriteLine($"Created: {fileController.CreatedAt}"); 
-Console.WriteLine($"Extension: {fileController.Extension}"); 
-Console.WriteLine($"Size: {fileController.GetSizeString()}");
+// Access rich metadata
+Console.WriteLine($"Type: {file.Information.TypeName}");
+Console.WriteLine($"MIME: {file.Information.MimeType}");
+Console.WriteLine($"Size: {file.Information.FormattedSize}");
+Console.WriteLine($"Extension: {file.Information.ActualExtension}");
 
-// Copy file asynchronously with progress reporting 
-await fileController.CopyAsync(
-	destination: "backup/", 
-	overwrite: true, 
-	progress: new Progress<StorageProgress>(p => {
-		Console.WriteLine($"Copied {p.BytesTransferred} of {p.TotalBytes} bytes ({p.ProgressPercentage:F2}%)");
-	})
-);
+// Copy with progress reporting
+await file.CopyAsync("backup/", progress: new Progress<StorageProgress>(p =>
+{
+    Console.WriteLine($"Progress: {p.BytesTransferred}/{p.TotalBytes} bytes ({p.BytesPerSecond:N0} B/s)");
+}));
+
+// Move or rename
+await file.MoveAsync("archive/");
+await file.RenameAsync("new-name.pdf");
 ```
 
-### API Overview
+### Working with Directories
 
-#### StorageController<T>
+```csharp
+using Rheo.Storage;
 
-- Abstract base for storage management
-- Properties: `Name`, `ParentDirectory`, `FullPath`, `CreatedAt`, `IsAvailable`, `SizeInBytes`
-- Methods: `CopyAsync`, `MoveAsync`, `DeleteAsync`, `RenameAsync`, `GetSize`, `GetSizeString`
+// Create a directory object (automatically monitors for changes)
+var directory = new DirectoryObject("C:/Projects");
 
-#### FileController
+// Access directory information
+Console.WriteLine($"Files: {directory.Information.NoOfFiles}");
+Console.WriteLine($"Subdirectories: {directory.Information.NoOfDirectories}");
+Console.WriteLine($"Total Size: {directory.Information.FormattedSize}");
 
-- Inherits from `StorageController<FileInfomation>`
-- File-specific operations and metadata
+// Get files and subdirectories
+var files = directory.GetFiles("*.cs", SearchOption.AllDirectories);
+var subdir = directory.GetDirectory("bin");
+var file = directory.GetFile("README.md");
 
-#### StorageProgress
+// Copy entire directory tree with concurrency control
+await directory.CopyAsync("backup/", maxConcurrent: 8);
+```
 
-- Progress reporting for async operations
-- Properties: `TotalBytes`, `BytesTransferred`, `BytesPerSecond`, `ProgressPercentage`
+### File Analysis
 
-#### StoragePaths
+```csharp
+var file = new FileObject("unknown-file");
 
-- Helpers for assembly root, local app data, and executable paths
+// Content-based analysis happens automatically
+var report = file.Information.IdentificationReport;
 
-## Testing
+Console.WriteLine($"Detected Type: {file.Information.TypeName}");
+Console.WriteLine($"True Extension: {file.Information.ActualExtension}");
+Console.WriteLine($"MIME Type: {file.Information.MimeType}");
 
-Unit tests are provided in the `Rheo.Test` project using xUnit and Moq. To run tests:
+// Access all possible file definitions
+foreach (var definition in report.Definitions)
+{
+    Console.WriteLine($"Possible: {definition.Subject.FileType}");
+}
+```
+
+## Documentation
+
+For comprehensive documentation, tutorials, and advanced usage examples, visit the [GitHub Wiki](https://github.com/D-Naveenz/Rheo/wiki).
 
 ## Requirements
 
-- .NET 9.0 or later
-- C# 13.0
-
-## Contributing
-
-Contributions are welcome! Please submit issues or pull requests via [GitHub](https://github.com/D-Naveenz/Rheo).
+- .NET 10.0 or later
+- C# 14.0
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. See [LICENSE.txt](LICENSE.txt) for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues or pull requests.
