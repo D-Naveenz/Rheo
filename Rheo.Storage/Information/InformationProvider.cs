@@ -5,16 +5,16 @@ using System.Runtime.InteropServices.ComTypes;
 namespace Rheo.Storage.Information
 {
     /// <summary>
-    /// Provides platform-specific methods and types for retrieving detailed file and directory information on Windows,
-    /// Linux, and macOS systems.
+    /// Provides platform-specific methods for retrieving detailed file and directory information on Windows, Linux, and
+    /// macOS systems.
     /// </summary>
-    /// <remarks>The InfomationProvider class exposes static methods for obtaining comprehensive file
-    /// metadata, including attributes, timestamps, ownership, and symbolic link information, using native system APIs.
-    /// It supports Windows (via Win32 and Shell interop), Linux (via lstat and readlink), and macOS (via stat/lstat
-    /// system calls), abstracting platform differences for cross-platform file inspection. Methods may throw exceptions
-    /// if the specified file or directory does not exist or if native API calls fail. Callers are responsible for
-    /// managing any native resources, such as icon handles, returned by certain Windows methods.</remarks>
-    public static partial class InformationProvider
+    /// <remarks>The InformationProvider class exposes internal static methods that interoperate with native
+    /// operating system APIs to obtain comprehensive file metadata, including attributes, ownership, timestamps, and
+    /// symbolic link or reparse point targets. It is intended for use by higher-level abstractions that require
+    /// cross-platform file system information. Methods in this class assume the specified file or directory exists and
+    /// may throw exceptions if native calls fail. Resource management, such as releasing native handles or memory, is
+    /// the responsibility of the caller where indicated.</remarks>
+    internal static partial class InformationProvider
     {
         #region Windows Implementation
         /// <summary>
@@ -25,7 +25,7 @@ namespace Rheo.Storage.Information
         /// about a file or folder should be retrieved from the Windows Shell. These flags can be combined using a bitwise OR operation.
         /// </remarks>
         [Flags]
-        public enum SHGFI : uint
+        private enum SHGFI : uint
         {
             /// <summary>
             /// Retrieve the handle to the icon that represents the file or folder.
@@ -119,7 +119,7 @@ namespace Rheo.Storage.Information
         /// values may be populated differently depending on the flags and parameters used with the corresponding Shell
         /// API call.</remarks>
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        public struct SHFILEINFO
+        private struct SHFILEINFO
         {
             /// <summary>
             /// Specifies a handle to an icon associated with the object.
@@ -371,7 +371,7 @@ namespace Rheo.Storage.Information
         /// <param name="absolutePath">The absolute path to the file or directory. Must exist.</param>
         /// <returns>A <see cref="WindowsStorageInfo"/> structure containing comprehensive file information.</returns>
         /// <exception cref="Win32Exception">Thrown if the file information cannot be retrieved.</exception>
-        public static WindowsStorageInfo GetWindowsFileInfo(string absolutePath)
+        internal static WindowsStorageInfo GetWindowsFileInfo(string absolutePath)
         {
             var info = new WindowsStorageInfo();
 
@@ -503,7 +503,7 @@ namespace Rheo.Storage.Information
         /// <returns>A <see cref="UnixStorageInfo"/> object containing the file's attributes, ownership, size, timestamps, and
         /// symbolic link target information if applicable.</returns>
         /// <exception cref="Win32Exception">Thrown when the file attributes cannot be retrieved.</exception>
-        public static UnixStorageInfo GetLinuxFileInfo(string absolutePath)
+        internal static UnixStorageInfo GetLinuxFileInfo(string absolutePath)
         {
             var info = new UnixStorageInfo();
             LinuxStat statBuf = new();
@@ -575,10 +575,10 @@ namespace Rheo.Storage.Information
         }
 
 #pragma warning disable SYSLIB1054 // Use 'LibraryImportAttribute' instead of 'DllImportAttribute' to generate P/Invoke marshalling code at compile time
-        [DllImport("libc", SetLastError = true, EntryPoint = "stat$INODE64")]
+        [DllImport("libc", SetLastError = true, EntryPoint = "stat$INODE64", CharSet = CharSet.Unicode)]
         private static extern int mac_stat(string path, ref MacStat buf);
 
-        [DllImport("libc", SetLastError = true, EntryPoint = "lstat$INODE64")]
+        [DllImport("libc", SetLastError = true, EntryPoint = "lstat$INODE64", CharSet = CharSet.Unicode)]
         private static extern int mac_lstat(string path, ref MacStat buf);
 #pragma warning restore SYSLIB1054
 
@@ -590,7 +590,7 @@ namespace Rheo.Storage.Information
         /// <param name="absolutePath">The absolute path of the file or directory. Must exist.</param>
         /// <returns>A <see cref="UnixStorageInfo"/> object containing the file's attributes, ownership, size, and timestamps.</returns>
         /// <exception cref="Win32Exception">Thrown when the file information cannot be retrieved.</exception>
-        public static UnixStorageInfo GetMacFileInfo(string absolutePath)
+        internal static UnixStorageInfo GetMacFileInfo(string absolutePath)
         {
             var info = new UnixStorageInfo();
             MacStat statBuf = new();

@@ -19,7 +19,7 @@ namespace Rheo.Storage.FileDefinition
         /// <param name="buffer">The byte array to analyze for BOM presence. Must not be null.</param>
         /// <param name="encoding">When this method returns, contains the detected encoding if a BOM is found; otherwise, null.</param>
         /// <returns><see langword="true"/> if a BOM was detected and the encoding was identified; otherwise, <see langword="false"/>.</returns>
-        public static bool TryDetectBOM(byte[] buffer, out Encoding? encoding)
+        internal static bool TryDetectBOM(byte[] buffer, out Encoding? encoding)
         {
             encoding = null;
 
@@ -72,7 +72,7 @@ namespace Rheo.Storage.FileDefinition
         /// designed to be robust and handle various text encodings including ASCII, UTF-8, UTF-16, and UTF-32.</remarks>
         /// <param name="buffer">The byte array to analyze. Must not be null or empty.</param>
         /// <returns><see langword="true"/> if the buffer is likely to contain text; <see langword="false"/> if it appears to be binary data.</returns>
-        public static bool IsTextContent(byte[] buffer)
+        internal static bool IsTextContent(byte[] buffer)
         {
             if (buffer.Length == 0)
                 return false;
@@ -141,6 +141,45 @@ namespace Rheo.Storage.FileDefinition
         }
 
         /// <summary>
+        /// Creates a fallback definition for files that could not be identified by pattern matching.
+        /// </summary>
+        /// <remarks>This method determines whether the content is text or binary and returns an appropriate
+        /// definition with low confidence. It's intended as a last resort for files without recognizable patterns.</remarks>
+        /// <param name="buffer">The file content buffer to analyze. Must not be null.</param>
+        /// <param name="filePath">The path to the file being analyzed, used for extension-based fallback.</param>
+        /// <returns>A <see cref="Definition"/> object representing either a plain text file or a generic binary file.</returns>
+        internal static Definition CreateFallbackDefinition(byte[] buffer, string filePath)
+        {
+            string extension = Path.GetExtension(filePath).TrimStart('.');
+            bool isText = IsTextContent(buffer);
+
+            if (isText)
+            {
+                return new Definition
+                {
+                    FileType = "Plain Text",
+                    Extensions = string.IsNullOrEmpty(extension) ? ["txt"] : [extension],
+                    MimeType = "text/plain",
+                    Remarks = "Detected as text content (no pattern match found)",
+                    Signature = new Signature(),
+                    PriorityLevel = -1000 // Very low priority
+                };
+            }
+            else
+            {
+                return new Definition
+                {
+                    FileType = "Binary Data",
+                    Extensions = string.IsNullOrEmpty(extension) ? ["bin"] : [extension],
+                    MimeType = "application/octet-stream",
+                    Remarks = "Detected as binary content (no pattern match found)",
+                    Signature = new Signature(),
+                    PriorityLevel = -1000 // Very low priority
+                };
+            }
+        }
+
+        /// <summary>
         /// Validates whether the specified buffer contains valid UTF-8 encoded text.
         /// </summary>
         /// <remarks>This method checks if the byte sequence conforms to UTF-8 encoding rules, including proper
@@ -188,45 +227,6 @@ namespace Rheo.Storage.FileDefinition
             }
 
             return true;
-        }
-
-        /// <summary>
-        /// Creates a fallback definition for files that could not be identified by pattern matching.
-        /// </summary>
-        /// <remarks>This method determines whether the content is text or binary and returns an appropriate
-        /// definition with low confidence. It's intended as a last resort for files without recognizable patterns.</remarks>
-        /// <param name="buffer">The file content buffer to analyze. Must not be null.</param>
-        /// <param name="filePath">The path to the file being analyzed, used for extension-based fallback.</param>
-        /// <returns>A <see cref="Definition"/> object representing either a plain text file or a generic binary file.</returns>
-        public static Definition CreateFallbackDefinition(byte[] buffer, string filePath)
-        {
-            string extension = Path.GetExtension(filePath).TrimStart('.');
-            bool isText = IsTextContent(buffer);
-
-            if (isText)
-            {
-                return new Definition
-                {
-                    FileType = "Plain Text",
-                    Extensions = string.IsNullOrEmpty(extension) ? ["txt"] : [extension],
-                    MimeType = "text/plain",
-                    Remarks = "Detected as text content (no pattern match found)",
-                    Signature = new Signature(),
-                    PriorityLevel = -1000 // Very low priority
-                };
-            }
-            else
-            {
-                return new Definition
-                {
-                    FileType = "Binary Data",
-                    Extensions = string.IsNullOrEmpty(extension) ? ["bin"] : [extension],
-                    MimeType = "application/octet-stream",
-                    Remarks = "Detected as binary content (no pattern match found)",
-                    Signature = new Signature(),
-                    PriorityLevel = -1000 // Very low priority
-                };
-            }
         }
     }
 }
