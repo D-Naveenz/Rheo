@@ -1,5 +1,4 @@
 ﻿using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
 
 namespace Rheo.Storage.Information
 {
@@ -43,6 +42,13 @@ namespace Rheo.Storage.Information
             public fixed char szTypeName[80];                             // Type description (max 80 chars)
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct FILETIME
+        {
+            public uint dwLowDateTime;
+            public uint dwHighDateTime;
+        }
+
         // File information structure from GetFileInformationByHandle
         [StructLayout(LayoutKind.Sequential)]
         private struct BY_HANDLE_FILE_INFORMATION
@@ -61,7 +67,7 @@ namespace Rheo.Storage.Information
 
         // Reparse point data structure for symbolic links and junctions
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        private struct REPARSE_DATA_BUFFER
+        private unsafe struct REPARSE_DATA_BUFFER
         {
             public uint ReparseTag;
             public ushort ReparseDataLength;
@@ -71,8 +77,9 @@ namespace Rheo.Storage.Information
             public ushort PrintNameOffset;
             public ushort PrintNameLength;
             public uint Flags;
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8184)]
-            public byte[] PathBuffer;                                     // Buffer for link target path
+
+            // Fixed-size buffers are Native AOT friendly
+            public fixed byte PathBuffer[8184];                           // Buffer for link target path
         }
 
         #endregion

@@ -105,20 +105,18 @@ namespace Rheo.Storage.Information
         /// <summary>
         /// Retrieves information about the specified file using its handle.
         /// </summary>
-        /// <remarks>If the method returns false, call GetLastError to obtain extended error information.
-        /// This method is a P/Invoke signature for the Windows API function GetFileInformationByHandle and is intended
-        /// for advanced scenarios involving direct file handle manipulation.</remarks>
+        /// <remarks>This method is a platform invocation of the Windows API function
+        /// GetFileInformationByHandle. It is supported only on Windows. The caller is responsible for ensuring that the
+        /// file handle remains valid for the duration of the call.</remarks>
         /// <param name="hFile">A handle to the file for which information is to be retrieved. The handle must have been created with
         /// appropriate access rights.</param>
-        /// <param name="lpFileInformation">When this method returns, contains a BY_HANDLE_FILE_INFORMATION structure that receives the file
-        /// information.</param>
-        /// <returns>true if the function succeeds; otherwise, false.</returns>
+        /// <param name="lpFileInformation">When this method returns, contains a structure that receives the file information. This parameter is passed
+        /// uninitialized.</param>
+        /// <returns>true if the function succeeds; otherwise, false. To get extended error information, call GetLastError.</returns>
         [SupportedOSPlatform("windows")]
-        [DllImport("kernel32.dll", SetLastError = true)]
+        [LibraryImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-#pragma warning disable SYSLIB1054
-        private static extern bool GetFileInformationByHandle(SafeFileHandle hFile, out BY_HANDLE_FILE_INFORMATION lpFileInformation);
-#pragma warning restore SYSLIB1054
+        private static partial bool GetFileInformationByHandle(SafeFileHandle hFile, out BY_HANDLE_FILE_INFORMATION lpFileInformation);
 
         /// <summary>
         /// Sends a control code directly to a specified device driver, causing the corresponding device to perform an
@@ -143,11 +141,9 @@ namespace Rheo.Storage.Information
         /// operation.</param>
         /// <returns>true if the operation succeeds; otherwise, false.</returns>
         [SupportedOSPlatform("windows")]
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        [LibraryImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-#pragma warning disable SYSLIB1054
-        private static extern bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, nint lpInBuffer, uint nInBufferSize, out REPARSE_DATA_BUFFER lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
-#pragma warning restore SYSLIB1054
+        private static partial bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, nint lpInBuffer, uint nInBufferSize, out REPARSE_DATA_BUFFER lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
 
         /// <summary>
         /// Retrieves security information about a specified object, including owner, group, discretionary access
@@ -235,12 +231,6 @@ namespace Rheo.Storage.Information
                     : string.Empty;
             }
 
-            // Always destroy the icon handle if SHGFI_ICON was used
-            if (shinfo.hIcon != IntPtr.Zero)
-            {
-                DestroyIcon(shinfo.hIcon);
-            }
-
             // Get detailed file information - NOW WITH AUTOMATIC DISPOSAL
             using SafeFileHandle fileHandle = CreateFile(absolutePath, GENERIC_READ, FILE_SHARE_READ, 
                 nint.Zero, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nint.Zero);
@@ -284,6 +274,13 @@ namespace Rheo.Storage.Information
             {
                 info.ReparseTarget = GetReparsePointTarget(fileHandle);
             }
+
+            // Always destroy the icon handle if SHGFI_ICON was used
+            if (shinfo.hIcon != nint.Zero)
+            {
+                DestroyIcon(shinfo.hIcon);
+            }
+
             return info;
         }
 
@@ -296,7 +293,7 @@ namespace Rheo.Storage.Information
         [SupportedOSPlatform("windows")]
         private static string? GetReparsePointTarget(SafeFileHandle fileHandle)
         {
-            if (!DeviceIoControl(fileHandle, FSCTL_GET_REPARSE_POINT, nint.Zero, 0, 
+            if (!DeviceIoControl(fileHandle, FSCTL_GET_REPARSE_POINT, nint.Zero, 0,
                 out REPARSE_DATA_BUFFER reparseData, (uint)Marshal.SizeOf<REPARSE_DATA_BUFFER>(), out _, nint.Zero))
             {
                 return null;
@@ -306,7 +303,13 @@ namespace Rheo.Storage.Information
             {
                 int offset = reparseData.PrintNameOffset / 2;
                 int length = reparseData.PrintNameLength / 2;
-                return System.Text.Encoding.Unicode.GetString(reparseData.PathBuffer, offset * 2, length * 2);
+                unsafe
+                {
+                    // Fix: Use unsafe context and Marshal.Copy to copy from byte* to byte[]
+                    byte[] buffer = new byte[length * 2];
+                    Marshal.Copy((nint)(reparseData.PathBuffer + offset * 2), buffer, 0, length * 2);
+                    return System.Text.Encoding.Unicode.GetString(buffer);
+                }
             }
 
             return null;
