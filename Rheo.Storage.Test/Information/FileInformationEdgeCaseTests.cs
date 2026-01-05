@@ -205,7 +205,7 @@ namespace Rheo.Storage.Test.Information
 
             // Assert
             // Empty file should have default or empty MIME type
-            Assert.True(fileInfo.IdentificationReport.IsEmpty || fileInfo.MimeType.Value == 0);
+            Assert.True(fileInfo.IdentificationReport.IsEmpty || Math.Abs(fileInfo.MimeType.Value) < 1e-9);
         }
 
         [Fact]

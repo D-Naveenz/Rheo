@@ -154,16 +154,12 @@ namespace Rheo.Storage.Information
             if (uom.HasValue)
             {
                 var size = Size;
-                return Size < 0 ? "Unknown size" : $"{size} {uom.Value}";
+                return $"{size} {uom.Value}";
             }
             else
             {
                 // Auto-select UOM
                 var size = Size;
-                if (size < 0)
-                {
-                    return "Unknown size";
-                }
 
                 return size switch
                 {

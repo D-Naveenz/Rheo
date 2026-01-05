@@ -28,7 +28,7 @@ namespace Rheo.Storage
             File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read).Dispose();
 
             // Load the information
-            _informationInternal = CrateNewInformationInstance();
+            _informationInternal = CreateNewInformationInstance();
         }
 
         /// <summary>
@@ -195,7 +195,7 @@ namespace Rheo.Storage
         }
 
         /// <inheritdoc/>
-        protected override FileInformation CrateNewInformationInstance()
+        protected override FileInformation CreateNewInformationInstance()
         {
             return new FileInformation(FullPath);
         }

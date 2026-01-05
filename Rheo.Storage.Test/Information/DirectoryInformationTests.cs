@@ -41,15 +41,15 @@ namespace Rheo.Storage.Test.Information
         {
             // Arrange
             var subDir = TestDir.CreateSubdirectory();
-            var testFile1 = await subDir.CreateTestFileAsync(
+            await subDir.CreateTestFileAsync(
                 ResourceType.Text,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
-            var testFile2 = await subDir.CreateTestFileAsync(
+            await subDir.CreateTestFileAsync(
                 ResourceType.Image,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
-            var testFile3 = await subDir.CreateTestFileAsync(
+            _ = await subDir.CreateTestFileAsync(
                 ResourceType.Binary,
                 cancellationToken: TestContext.Current.CancellationToken
                 );

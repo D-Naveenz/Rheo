@@ -40,7 +40,7 @@ namespace Rheo.Storage
                 Directory.CreateDirectory(ParentDirectory);
             }
 
-            // Initialize event listners
+            // Initialize event listeners
             StorageChanged += StorageObject_StorageChanged;
         }
 
@@ -208,7 +208,7 @@ namespace Rheo.Storage
         /// <remarks>Derived classes must implement this method to provide a concrete instance of <see
         /// cref="IStorageInformation"/> appropriate for their storage mechanism.</remarks>
         /// <returns>An <see cref="IStorageInformation"/> instance representing the newly created storage information.</returns>
-        protected abstract IStorageInformation CrateNewInformationInstance();
+        protected abstract IStorageInformation CreateNewInformationInstance();
 
         /// <summary>
         /// Raises the StorageChanged event to notify subscribers of changes in the storage state.
@@ -233,7 +233,7 @@ namespace Rheo.Storage
         /// change.</param>
         protected virtual void StorageObject_StorageChanged(object? sender, StorageChangedEventArgs e)
         {
-            // Changiing the path will change the entrie identity of the object.
+            // Changing the path will change the entire identity of the object.
             FullPath = GetValidPath(e.AbsolutePath);
 
             if (e.ChangeType == StorageChangeType.Created ||
@@ -245,7 +245,7 @@ namespace Rheo.Storage
                     lock (_infoLock)
                     {
                         // Load the new information
-                        _informationInternal = CrateNewInformationInstance();
+                        _informationInternal = CreateNewInformationInstance();
                     }
                 });
             }

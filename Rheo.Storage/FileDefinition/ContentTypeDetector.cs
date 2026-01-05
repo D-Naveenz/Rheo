@@ -153,9 +153,8 @@ namespace Rheo.Storage.FileDefinition
             string extension = Path.GetExtension(filePath).TrimStart('.');
             bool isText = IsTextContent(buffer);
 
-            if (isText)
-            {
-                return new Definition
+            return isText
+                ? new Definition
                 {
                     FileType = "Plain Text",
                     Extensions = string.IsNullOrEmpty(extension) ? ["txt"] : [extension],
@@ -163,11 +162,8 @@ namespace Rheo.Storage.FileDefinition
                     Remarks = "Detected as text content (no pattern match found)",
                     Signature = new Signature(),
                     PriorityLevel = -1000 // Very low priority
-                };
-            }
-            else
-            {
-                return new Definition
+                }
+                : new Definition
                 {
                     FileType = "Binary Data",
                     Extensions = string.IsNullOrEmpty(extension) ? ["bin"] : [extension],
@@ -176,7 +172,6 @@ namespace Rheo.Storage.FileDefinition
                     Signature = new Signature(),
                     PriorityLevel = -1000 // Very low priority
                 };
-            }
         }
 
         /// <summary>
