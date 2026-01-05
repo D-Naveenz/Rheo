@@ -57,7 +57,7 @@ namespace Rheo.Storage
                 _watcher.Deleted += Watcher_Changed;
 
                 // Load the information
-                _informationInternal = CrateNewInformationInstance();
+                _informationInternal = CreateNewInformationInstance();
             }
             catch (Exception ex)
             {
@@ -377,7 +377,7 @@ namespace Rheo.Storage
         }
 
         /// <inheritdoc/>
-        protected override DirectoryInformation CrateNewInformationInstance()
+        protected override DirectoryInformation CreateNewInformationInstance()
         {
             return new DirectoryInformation(FullPath);
         }

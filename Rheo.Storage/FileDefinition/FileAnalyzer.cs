@@ -289,12 +289,9 @@ namespace Rheo.Storage.FileDefinition
                 byte[] fileBuffer = new byte[stream.Length];
                 stream.ReadExactly(fileBuffer, 0, fileBuffer.Length);
                 
-                foreach (var stringBytes in definition.Signature.Strings)
+                foreach (var stringBytes in definition.Signature.Strings.Where(s => ContainsSequence(fileBuffer, s)))
                 {
-                    if (ContainsSequence(fileBuffer, stringBytes))
-                    {
-                        points += stringBytes.Length * 500;
-                    }
+                    points += stringBytes.Length * 500;
                 }
             }
             return points;
