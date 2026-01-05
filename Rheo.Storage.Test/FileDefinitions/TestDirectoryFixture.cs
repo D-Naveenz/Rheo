@@ -1,4 +1,5 @@
 ﻿using Rheo.Storage.Test.Models;
+using System.Diagnostics;
 
 namespace Rheo.Storage.Test.FileDefinitions
 {
@@ -11,8 +12,11 @@ namespace Rheo.Storage.Test.FileDefinitions
             TestDir = TestDirectory.Create();
 
 #if DEBUG
-            // Open the folder in file explorer for debugging
-            TestDir.OpenInFileBrowser();
+            // Only open the folder when actively debugging (not just running tests)
+            if (Debugger.IsAttached)
+            {
+                TestDir.OpenInFileBrowser();
+            }
 #endif
         }
 

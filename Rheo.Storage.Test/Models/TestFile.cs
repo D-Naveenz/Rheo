@@ -81,6 +81,9 @@ namespace Rheo.Storage.Test.Models
 
             // Ensure all data is flushed to the file
             await destStream.FlushAsync(cancellationToken);
+
+            // Raise the Event
+            OnStorageChanged(new(FullPath, StorageChangeType.Created));
         }
     }
 }

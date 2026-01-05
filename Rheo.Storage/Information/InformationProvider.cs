@@ -14,7 +14,7 @@ namespace Rheo.Storage.Information
     /// system calls), abstracting platform differences for cross-platform file inspection. Methods may throw exceptions
     /// if the specified file or directory does not exist or if native API calls fail. Callers are responsible for
     /// managing any native resources, such as icon handles, returned by certain Windows methods.</remarks>
-    public static class InformationProvider
+    public static partial class InformationProvider
     {
         #region Windows Implementation
         /// <summary>
@@ -203,7 +203,6 @@ namespace Rheo.Storage.Information
         private const uint IO_REPARSE_TAG_SYMLINK = 0xA000000C;
         private const uint FSCTL_GET_REPARSE_POINT = 0x000900A8;
 
-#pragma warning disable SYSLIB1054
         /// <summary>
         /// Retrieves information about a file or folder, such as its icon, display name, and type, from the Windows
         /// Shell.
@@ -222,7 +221,9 @@ namespace Rheo.Storage.Information
         /// display name, or type name.</param>
         /// <returns>A handle to the icon specified in the <paramref name="uFlags"/> parameter if successful; otherwise, zero.</returns>
         [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+#pragma warning disable SYSLIB1054
         private static extern nint SHGetFileInfo(string pszPath, uint dwFileAttributes, out SHFILEINFO psfi, uint cbFileInfo, uint uFlags);
+#pragma warning restore SYSLIB1054
 
         /// <summary>
         /// Creates or opens a file or I/O device and returns a handle that can be used to access it. This method
@@ -248,8 +249,8 @@ namespace Rheo.Storage.Information
         /// <param name="hTemplateFile">A handle to a template file with the desired attributes to copy to the new file, or zero if not used. Only
         /// used when creating a new file.</param>
         /// <returns>A handle to the created or opened file or device. Returns an invalid handle value if the operation fails.</returns>
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern nint CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, nint lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, nint hTemplateFile);
+        [LibraryImport("kernel32.dll", EntryPoint = "CreateFileW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        private static partial nint CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, nint lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, nint hTemplateFile);
 
         /// <summary>
         /// Retrieves information about the specified file using its handle.
@@ -263,7 +264,9 @@ namespace Rheo.Storage.Information
         /// information.</param>
         /// <returns>true if the function succeeds; otherwise, false.</returns>
         [DllImport("kernel32.dll", SetLastError = true)]
+#pragma warning disable SYSLIB1054
         private static extern bool GetFileInformationByHandle(nint hFile, out BY_HANDLE_FILE_INFORMATION lpFileInformation);
+#pragma warning restore SYSLIB1054
 
         /// <summary>
         /// Closes an open object handle, releasing the associated system resources.
@@ -274,8 +277,9 @@ namespace Rheo.Storage.Information
         /// <param name="hObject">A handle to an open object, such as a file, process, thread, or other system resource. The handle must have
         /// been obtained from a Windows API call that returns a handle.</param>
         /// <returns>true if the handle was closed successfully; otherwise, false.</returns>
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool CloseHandle(nint hObject);
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool CloseHandle(nint hObject);
 
         /// <summary>
         /// Sends a control code directly to a specified device driver, causing the corresponding device to perform an
@@ -300,7 +304,9 @@ namespace Rheo.Storage.Information
         /// operation.</param>
         /// <returns>true if the operation succeeds; otherwise, false.</returns>
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+#pragma warning disable SYSLIB1054
         private static extern bool DeviceIoControl(nint hDevice, uint dwIoControlCode, nint lpInBuffer, uint nInBufferSize, out REPARSE_DATA_BUFFER lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, nint lpOverlapped);
+#pragma warning restore SYSLIB1054
 
         /// <summary>
         /// Retrieves security information about a specified object, including owner, group, discretionary access
@@ -325,8 +331,9 @@ namespace Rheo.Storage.Information
         /// <param name="ppSecurityDescriptor">Receives a pointer to the security descriptor structure for the object. The caller is responsible for
         /// freeing this memory using the appropriate API.</param>
         /// <returns>true if the security information was retrieved successfully; otherwise, false.</returns>
-        [DllImport("advapi32.dll", SetLastError = true)]
-        private static extern bool GetSecurityInfo(nint handle, uint objectType, uint securityInfo, out nint ppsidOwner, out nint ppsidGroup, out nint ppDacl, out nint ppSacl, out nint ppSecurityDescriptor);
+        [LibraryImport("advapi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool GetSecurityInfo(nint handle, uint objectType, uint securityInfo, out nint ppsidOwner, out nint ppsidGroup, out nint ppDacl, out nint ppSacl, out nint ppSecurityDescriptor);
 
         /// <summary>
         /// Converts a security identifier (SID) to its string representation.
@@ -338,8 +345,9 @@ namespace Rheo.Storage.Information
         /// <param name="pStringSid">When this method returns, contains a pointer to a null-terminated Unicode string that represents the SID.
         /// The caller is responsible for freeing this memory using LocalFree.</param>
         /// <returns>true if the conversion succeeds; otherwise, false.</returns>
-        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern bool ConvertSidToStringSid(nint pSid, out nint pStringSid);
+        [LibraryImport("advapi32.dll", EntryPoint = "ConvertSidToStringSidW", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool ConvertSidToStringSid(nint pSid, out nint pStringSid);
 
         /// <summary>
         /// Frees the memory allocated by the local memory management functions.
@@ -351,9 +359,8 @@ namespace Rheo.Storage.Information
         /// local memory allocation function and must not be null.</param>
         /// <returns>If the function succeeds, the return value is zero. If the function fails, the return value is equal to the
         /// input handle.</returns>
-        [DllImport("kernel32.dll")]
-        private static extern nint LocalFree(nint hMem);
-#pragma warning restore SYSLIB1054
+        [LibraryImport("kernel32.dll", EntryPoint = "LocalFreeW")]
+        private static partial nint LocalFree(nint hMem);
 
         /// <summary>
         /// Retrieves comprehensive file information for a file or directory on Windows using native Win32 APIs.
@@ -480,10 +487,10 @@ namespace Rheo.Storage.Information
         }
 
 #pragma warning disable SYSLIB1054
-        [DllImport("libc", SetLastError = true)]
+        [DllImport("libc", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern int lstat(string pathname, ref LinuxStat stat_buf);
 
-        [DllImport("libc", SetLastError = true)]
+        [DllImport("libc", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern int readlink(string pathname, byte[] buf, int bufsiz);
 #pragma warning restore SYSLIB1054
 
