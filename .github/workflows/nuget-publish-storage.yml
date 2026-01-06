@@ -10,13 +10,7 @@ on:
 
 jobs:
   build-test-pack-publish:
-    runs-on:  windows-latest
-
-    env:
-      Solution_Name: Rheo.sln
-      DefinitionsBuilder_Project_Path: Rheo.Storage.DefinitionsBuilder\Rheo.Storage.DefinitionsBuilder.csproj
-      Storage_Project_Path: Rheo.Storage\Rheo.Storage.csproj
-      Test_Project_Path: Rheo.Storage.Test\Rheo.Storage.Test.csproj
+    runs-on: windows-latest
 
     steps:
     - name: Checkout repository
@@ -27,25 +21,10 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 9.0.x
+        dotnet-version: 10.0.x
 
-    - name: Restore dependencies
-      run: dotnet restore ${{ env.Solution_Name }}
-
-    # - name: Build DefinitionsBuilder (generates filedefs.rpkg)
-    #   run: dotnet build ${{ env.DefinitionsBuilder_Project_Path }} --configuration Release --no-restore
-
-    - name: Build Rheo.Storage
-      run: dotnet build ${{ env.Storage_Project_Path }} --configuration Release --no-restore
-
-    - name: Build Rheo.Storage.Test
-      run: dotnet build ${{ env.Test_Project_Path }} --configuration Release --no-restore
-
-    - name: Run tests
-      run: dotnet test ${{ env.Test_Project_Path }} --configuration Release --no-build --verbosity normal
-
-    - name: Pack NuGet package
-      run: dotnet pack ${{ env.Storage_Project_Path }} --configuration Release --no-build --output ./nupkg
-
-    - name:  Publish NuGet package
-      run: dotnet nuget push ./nupkg/*. nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+    - name: Build, test, pack, and publish NuGet package artifact
+      shell: pwsh
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+      run: .\build.ps1 -Publish -ApiKey $env:NUGET_API_KEY

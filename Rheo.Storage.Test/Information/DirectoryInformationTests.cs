@@ -309,15 +309,16 @@ namespace Rheo.Storage.Test.Information
         [Fact]
         public async Task ToString_IncludesAllCountsAsync()
         {
-            // Arrange
-            await TestDir.CreateTestFileAsync(
+            // Arrange - Use isolated subdirectory to avoid interference from other tests
+            var testSubDir = TestDir.CreateSubdirectory();
+            await testSubDir.CreateTestFileAsync(
                 ResourceType.Text,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
-            Directory.CreateDirectory(Path.Combine(TestDir.FullPath, "subdir"));
+            Directory.CreateDirectory(Path.Combine(testSubDir.FullPath, "subdir"));
 
             // Act
-            var dirInfo = new DirectoryInformation(TestDir.FullPath);
+            var dirInfo = new DirectoryInformation(testSubDir.FullPath);
             var result = dirInfo.ToString();
 
             // Assert
