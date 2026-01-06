@@ -10,10 +10,10 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/D-Naveenz/Rheo</RepositoryUrl>
     <Copyright>Copyright (c) 2025 Naveen Dharmathunga, All rights reserved.</Copyright>
-    <Description>Rheo.Storage is a modern, high-performance library for managing files and directories with rich metadata, asynchronous operations, and progress reporting.</Description>
+    <Description>A modern .NET library for file and directory operations with rich metadata, content-based file analysis, and asynchronous I/O operations.</Description>
     <Version>0.5.4-beta.2</Version>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <PackageTags>rheo; mime; magicnumber; extension; type; definition; detection, file, directory, handling, async</PackageTags>
+    <PackageTags>definition; extension; types; asynchronous; mime; file-handling; directory-management; magicnumbers; file-analyzing; rheo;</PackageTags>
     <DocumentationFile>$(MSBuildProjectDirectory)\documentation.xml</DocumentationFile>
   </PropertyGroup>
 
