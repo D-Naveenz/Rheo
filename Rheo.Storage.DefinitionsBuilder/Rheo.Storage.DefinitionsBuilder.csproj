@@ -45,7 +45,7 @@
       <Copy SourceFiles="@(MyAssets)" DestinationFolder="$(OutputPath)\Data\%(RecursiveDir)" />
   </Target>
 
-  <Target Name="BuildAndPack" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Release' And Exists('$(ProjectDir)Data\TrID\triddefs.trd')">
+  <Target Name="BuildAndPack" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Release'">
     <Exec Command="pwsh -File &quot;$(ProjectDir)build-and-pack.ps1&quot; -Configuration $(Configuration) -SkipBuild" />
   </Target>
 </Project>
