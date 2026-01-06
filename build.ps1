@@ -210,7 +210,7 @@ if (-not (Test-Path $ResolvedOutputPath)) {
 }
 
 try {
-    dotnet pack $StorageProject --configuration $Configuration --output $ResolvedOutputPath
+    dotnet pack $StorageProject --configuration $Configuration --no-build --output $ResolvedOutputPath
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet pack failed with exit code $LASTEXITCODE"
     }
