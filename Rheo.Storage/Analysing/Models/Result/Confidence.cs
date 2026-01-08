@@ -1,4 +1,4 @@
-﻿namespace Rheo.Storage.FileDefinition.Models.Result
+﻿namespace Rheo.Storage.Analysing.Models.Result
 {
     
     /// <summary>

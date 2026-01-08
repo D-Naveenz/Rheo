@@ -1,7 +1,7 @@
 ﻿using MessagePack;
 using System.Text;
 
-namespace Rheo.Storage.FileDefinition.Models
+namespace Rheo.Storage.Analysing.Models
 {
     /// <summary>
     /// Represents a pattern with an associated position and data.

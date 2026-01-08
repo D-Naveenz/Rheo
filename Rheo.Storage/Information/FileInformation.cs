@@ -1,5 +1,5 @@
-﻿using Rheo.Storage.FileDefinition;
-using Rheo.Storage.FileDefinition.Models.Result;
+﻿using Rheo.Storage.Analysing;
+using Rheo.Storage.Analysing.Models.Result;
 
 namespace Rheo.Storage.Information
 {
