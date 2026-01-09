@@ -12,7 +12,7 @@ namespace Rheo.Storage.Information
     /// metadata, which can provide more accurate identification than relying on file name or extension alone. This
     /// class is typically used when you need to determine the true nature of a file, regardless of its name or
     /// extension.</remarks>
-    public class FileInformation : StorageInformation, IEquatable<FileInformation>
+    public sealed class FileInformation : StorageInformation, IEquatable<FileInformation>
     {
         private readonly TaskCompletionSource<AnalysisResult> _analysisTaskAwaiter;
         private readonly Lazy<AnalysisResult> _identificationReportLazy;

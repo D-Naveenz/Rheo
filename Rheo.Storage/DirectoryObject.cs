@@ -193,7 +193,7 @@ namespace Rheo.Storage
             var totalBytes = files.Sum(file => new FileInfo(file).Length);
             long bytesTransferred = 0;
 
-            var bufferSize = (int)GetBufferSize(Information.Size);
+            var bufferSize = GetBufferSize();
             var stopwatch = Stopwatch.StartNew();
 
             // Create all directories first (including empty ones)

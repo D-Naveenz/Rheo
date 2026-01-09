@@ -10,7 +10,7 @@ namespace Rheo.Storage.Information
     /// the number of files, number of subdirectories, and the total size of all files within the directory tree. If the
     /// application lacks sufficient permissions to access parts of the directory, some properties may return fallback
     /// values (such as -1 or 0) to indicate that the operation could not be completed.</remarks>
-    public class DirectoryInformation : StorageInformation, IEquatable<DirectoryInformation>
+    public sealed class DirectoryInformation : StorageInformation, IEquatable<DirectoryInformation>
     {
         private readonly DirectoryInfo _systemDirInfo;
 

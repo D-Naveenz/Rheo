@@ -46,7 +46,7 @@ namespace Rheo.Storage.Test.Models
             )
         {
             ArgumentNullException.ThrowIfNull(content);
-            var bufferSize = GetBufferSize(Information.Size);
+            var bufferSize = GetBufferSize();
 
             using var memoryStream = new MemoryStream(content);
             using var destStream = new FileStream(

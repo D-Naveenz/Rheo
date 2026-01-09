@@ -48,7 +48,7 @@ namespace Rheo.Storage
             CancellationToken cancellationToken = default)
         {
             ProcessDestinationPath(ref destination, overwrite);
-            var bufferSize = (int)GetBufferSize(Information.Size);
+            var bufferSize = GetBufferSize();
 
             using var sourceStream = new FileStream(
                 FullPath,

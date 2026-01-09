@@ -147,18 +147,24 @@ namespace Rheo.Storage
         }
 
         /// <summary>
-        /// Calculates an appropriate buffer size based on the specified total size, ensuring the result is within
-        /// allowed minimum and maximum limits.
+        /// Calculates the recommended buffer size based on the current storage information.
         /// </summary>
-        /// <remarks>This method aims to divide the total size into approximately 100 chunks, but will not
-        /// return a value smaller than the minimum buffer size or larger than the maximum buffer size.</remarks>
-        /// <param name="size">The total size, in bytes, for which to determine a suitable buffer size. If null or zero, the minimum buffer
-        /// size is used.</param>
-        /// <returns>A buffer size, in bytes, that is suitable for the specified total size and constrained to the allowed
-        /// minimum and maximum values.</returns>
-        protected static int GetBufferSize(ulong? size)
+        /// <remarks>The returned buffer size is determined by the size of the underlying storage. If the
+        /// storage size is zero or less than the minimum buffer size, the minimum buffer size is returned. If the
+        /// storage size exceeds the maximum buffer size, the maximum buffer size is returned. Otherwise, the buffer
+        /// size is calculated to target approximately 100 chunks, within the allowed range.</remarks>
+        /// <returns>An integer representing the recommended buffer size, constrained between the minimum and maximum allowed
+        /// values.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the storage information has not been initialized.</exception>
+        public int GetBufferSize()
         {
-            if (size is null || size == 0)
+            if (_informationInternal is null)
+            {
+                throw new InvalidOperationException("Storage information is not initialized.");
+            }
+            var size = _informationInternal.Size;
+
+            if (size == 0)
                 return MIN_BUFFER_SIZE;
             else if (size < MIN_BUFFER_SIZE)
                 return MIN_BUFFER_SIZE;
