@@ -368,12 +368,6 @@ namespace Rheo.Storage
             GC.SuppressFinalize(this);
         }
 
-        /// <inheritdoc/>
-        protected override DirectoryInformation CreateNewInformationInstance()
-        {
-            return new DirectoryInformation(FullPath);
-        }
-
         /// <summary>
         /// Validates the specified path and returns its full directory path if it does not point to an existing file.
         /// </summary>

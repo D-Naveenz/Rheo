@@ -28,7 +28,7 @@ namespace Rheo.Storage.Handling
         {
             // INITIALIZATION
             ProcessDestinationPath(ref destination, source.Name, overwrite);
-            var _lock = source.GetHandlingLock();
+            var _lock = source.Semaphore;
             var bufferSize = source.GetBufferSize();
 
             // OPERATION
@@ -73,7 +73,7 @@ namespace Rheo.Storage.Handling
         /// <exception cref="InvalidOperationException">Thrown if the file cannot be deleted due to an I/O error or insufficient permissions.</exception>
         public static void Delete(FileObject file)
         {
-            var _lock = file.GetHandlingLock();
+            var _lock = file.Semaphore;
 
             _lock.Wait();
             try
@@ -119,7 +119,7 @@ namespace Rheo.Storage.Handling
         {
             // INITIALIZATION
             ProcessDestinationPath(ref destination, source.Name, overwrite);
-            var _lock = source.GetHandlingLock();
+            var _lock = source.Semaphore;
 
             // OPERATION
             _lock.Wait();
@@ -191,7 +191,7 @@ namespace Rheo.Storage.Handling
             // INITIALIZATION
             var destination = Path.Combine(source.ParentDirectory, newName);
             ProcessDestinationPath(ref destination, newName, false);
-            var _lock = source.GetHandlingLock();
+            var _lock = source.Semaphore;
 
             // OPERATION
             _lock.Wait();
@@ -237,7 +237,7 @@ namespace Rheo.Storage.Handling
             IProgress<StorageProgress>? progress = null)
         {
             // INITIALIZATION
-            var _lock = source.GetHandlingLock();
+            var _lock = source.Semaphore;
             var bufferSize = source.GetBufferSize();
             var destination = source.FullPath;
 

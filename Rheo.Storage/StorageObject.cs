@@ -13,17 +13,23 @@ namespace Rheo.Storage
     /// mechanisms.</remarks>
     /// <typeparam name="TObj">The type that implements the storage object, used for fluent return types in derived classes.</typeparam>
     /// <typeparam name="TInfo">The type that provides metadata information about the storage object, such as size, attributes, and timestamps.</typeparam>
-    public abstract class StorageObject<TObj, TInfo> : IDisposable
+    public abstract class StorageObject<TObj, TInfo> : IDisposable      // Using Curiously Recurring Template Pattern (CRTP)
         where TObj : StorageObject<TObj, TInfo>
         where TInfo : IStorageInformation
     {
         private const int MIN_BUFFER_SIZE = 1024; // 1KB
         private const int MAX_BUFFER_SIZE = 16 * 1024 * 1024; // 16MB
 
-        private static readonly Dictionary<string, SemaphoreSlim> _handlingLocks = [];
-        private static readonly Lock _dictionaryLock = new();
-
+        //private static readonly Dictionary<string, SemaphoreSlim> _handlingLocks = [];
+        //private static readonly Lock _dictionaryLock = new();
+        
         private bool _disposed;
+        private readonly SemaphoreSlim _stateLockingSemaphore = new(1, 1);
+
+        /// <summary>
+        /// Provides a lock object to synchronize access to the internal state of the storage object.
+        /// </summary>
+        protected readonly Lock _stateLock = new();
 
         /// <summary>
         /// Initializes a new instance of the StorageObject class for the specified file or path.
@@ -66,6 +72,8 @@ namespace Rheo.Storage
         /// Gets the full path of the file or directory by combining the parent directory and the name.
         /// </summary>
         public string FullPath { get; protected set; }
+
+        internal SemaphoreSlim Semaphore => _stateLockingSemaphore;
 
         #endregion
 
@@ -155,31 +163,36 @@ namespace Rheo.Storage
         public abstract Task<TObj> MoveAsync(string destination, IProgress<StorageProgress>? progress, bool overwrite = false, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Renames the storage object to the specified new name.
+        /// Renames the current object to the specified name.
         /// </summary>
-        /// <param name="newName">The new name for the storage object.</param>
-        /// <returns>A new instance of <typeparamref name="TObj"/> representing the renamed object.</returns>
-        public abstract TObj Rename(string newName);
+        /// <param name="newName">The new name to assign to the object. Cannot be null or empty.</param>
+        public abstract void Rename(string newName);
 
         /// <summary>
-        /// Asynchronously renames the storage object to the specified new name.
+        /// Asynchronously renames the current item to the specified name.
         /// </summary>
-        /// <param name="newName">The new name for the storage object.</param>
-        /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-        /// <returns>A task representing the asynchronous rename operation. The result is a new instance of <typeparamref name="TObj"/> representing the renamed object.</returns>
-        public abstract Task<TObj> RenameAsync(string newName, CancellationToken cancellationToken = default);
+        /// <param name="newName">The new name to assign to the item. Cannot be null or empty.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the rename operation.</param>
+        /// <returns>A task that represents the asynchronous rename operation.</returns>
+        public abstract Task RenameAsync(string newName, CancellationToken cancellationToken = default);
 
         #endregion
 
-        /// <inheritdoc/>
-        public override string ToString()
+        /// <summary>
+        /// Copies the information and full path from the specified source object to the current instance.
+        /// </summary>
+        /// <param name="source">The source <see cref="StorageObject{TObj, TInfo}"/> from which to copy information and full path. Cannot be
+        /// null.</param>
+        public virtual void CopyFrom(StorageObject<TObj, TInfo> source)
         {
-            if (Information is null)
-            {
-                return $"{Name} | Info: N/A";
-            }
+            ThrowIfDisposed();
+            ArgumentNullException.ThrowIfNull(source);
 
-            return Information.ToString()!;
+            lock (_stateLock)  // Protect state mutation
+            {
+                Information = source.Information;
+                FullPath = source.FullPath;
+            }
         }
 
         /// <summary>
@@ -233,32 +246,21 @@ namespace Rheo.Storage
         /// <summary>
         /// Throws an <see cref="ObjectDisposedException"/> if this storage object has been disposed.
         /// </summary>
+        /// <exception cref="ObjectDisposedException">Thrown if the object has already been disposed.</exception>"
         public void ThrowIfDisposed()
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
         }
 
-        /// <summary>
-        /// Retrieves a semaphore used to synchronize access to operations associated with the current object's path.
-        /// </summary>
-        /// <remarks>The returned semaphore is unique to the object's full path and is shared among all
-        /// callers requesting a lock for the same path. Use this semaphore to ensure that operations affecting the same
-        /// path are properly synchronized across threads.</remarks>
-        /// <returns>A <see cref="SemaphoreSlim"/> instance that can be used to coordinate concurrent handling for the object's
-        /// path.</returns>
-        internal SemaphoreSlim GetHandlingLock()
+        /// <inheritdoc/>
+        public override string ToString()
         {
-            var path = FullPath;
-
-            lock (_dictionaryLock)
+            if (Information is null)
             {
-                if (!_handlingLocks.TryGetValue(path, out var semaphore))
-                {
-                    semaphore = new SemaphoreSlim(1, 1);
-                    _handlingLocks[path] = semaphore;
-                }
-                return semaphore;
+                return $"{Name} | Info: N/A";
             }
+
+            return Information.ToString()!;
         }
 
         /// <summary>

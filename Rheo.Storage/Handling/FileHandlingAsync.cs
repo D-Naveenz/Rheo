@@ -32,7 +32,7 @@ namespace Rheo.Storage.Handling
         {
             // INITIALIZATION
             ProcessDestinationPath(ref destination, source.Name, overwrite);
-            var _lock = source.GetHandlingLock();
+            var _lock = source.Semaphore;
             var bufferSize = source.GetBufferSize();
 
             // OPERATION
@@ -79,7 +79,7 @@ namespace Rheo.Storage.Handling
         /// <exception cref="InvalidOperationException">Thrown if the file cannot be deleted due to an I/O error or insufficient permissions.</exception>
         public static async Task DeleteAsync(FileObject file, CancellationToken cancellationToken = default)
         {
-            var _lock = file.GetHandlingLock();
+            var _lock = file.Semaphore;
 
             await _lock.WaitAsync(cancellationToken);
             try
@@ -126,7 +126,7 @@ namespace Rheo.Storage.Handling
         {
             // INITIALIZATION
             ProcessDestinationPath(ref destination, source.Name, overwrite);
-            var _lock = source.GetHandlingLock();
+            var _lock = source.Semaphore;
 
             // OPERATION
             await _lock.WaitAsync(cancellationToken);
@@ -170,7 +170,7 @@ namespace Rheo.Storage.Handling
             try
             {
                 copiedFile = await CopyAsync(source, destination, overwrite, progress, cancellationToken);
-                await DeleteAsync(source);
+                await DeleteAsync(source, cancellationToken);
 
                 // FINALIZATION
                 return copiedFile;
@@ -180,7 +180,7 @@ namespace Rheo.Storage.Handling
                 // Rollback: Delete the copied file if delete of source failed
                 if (copiedFile != null)
                 {
-                    try { await DeleteAsync(copiedFile); } catch { /* Log but don't throw */ }
+                    try { await DeleteAsync(copiedFile, cancellationToken); } catch { /* Log but don't throw */ }
                 }
                 throw;
             }
@@ -206,7 +206,7 @@ namespace Rheo.Storage.Handling
             // INITIALIZATION
             var destination = Path.Combine(source.ParentDirectory, newName);
             ProcessDestinationPath(ref destination, newName, false);
-            var _lock = source.GetHandlingLock();
+            var _lock = source.Semaphore;
 
             // OPERATION
             await _lock.WaitAsync(cancellationToken);
@@ -258,7 +258,7 @@ namespace Rheo.Storage.Handling
             CancellationToken cancellationToken = default)
         {
             // INITIALIZATION
-            var _lock = source.GetHandlingLock();
+            var _lock = source.Semaphore;
             var bufferSize = source.GetBufferSize();
             var destination = source.FullPath;
 

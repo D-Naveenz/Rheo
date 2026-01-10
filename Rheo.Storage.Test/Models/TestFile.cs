@@ -27,15 +27,12 @@ namespace Rheo.Storage.Test.Models
         public bool IsTemporary => Information?.IsTemporary ?? false;
 
         /// <summary>
-        /// Asynchronously writes the specified content to the file represented by this instance.
+        /// Asynchronously writes the specified byte array to storage.
         /// </summary>
-        /// <remarks>If overwrite is set to false and the file already exists, an exception is thrown.
-        /// Progress updates are reported periodically if a progress reporter is provided. The method is asynchronous
-        /// and does not block the calling thread.</remarks>
-        /// <param name="content">The byte array containing the data to write to the file. Cannot be null.</param>
-        /// <param name="overwrite">true to overwrite the file if it already exists; false to throw an exception if the file exists.</param>
-        /// <param name="progress">An optional progress reporter that receives updates about the number of bytes transferred and the transfer
-        /// rate. May be null.</param>
+        /// <param name="content">The byte array containing the data to write. Cannot be null.</param>
+        /// <param name="overwrite">true to overwrite existing content if present; otherwise, false to prevent overwriting.</param>
+        /// <param name="progress">An optional progress reporter that receives storage operation progress updates. May be null if progress
+        /// reporting is not required.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the write operation.</param>
         /// <returns>A task that represents the asynchronous write operation.</returns>
         public async Task WriteAsync(
@@ -46,7 +43,6 @@ namespace Rheo.Storage.Test.Models
             )
         {
             ArgumentNullException.ThrowIfNull(content);
-            var bufferSize = GetBufferSize();
 
             using var memoryStream = new MemoryStream(content);
             await WriteAsync(memoryStream, progress, overwrite, cancellationToken);
