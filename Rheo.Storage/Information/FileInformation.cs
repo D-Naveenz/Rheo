@@ -54,25 +54,6 @@ namespace Rheo.Storage.Information
             _identificationReportLazy = new Lazy<AnalysisResult>(() => _analysisTaskAwaiter.Task.GetAwaiter().GetResult());
         }
 
-        /// <summary>
-        /// Creates a new instance of the specified storage information type for the given absolute path.
-        /// </summary>
-        /// <typeparam name="TInfo">The type of storage information to create. Must implement <see cref="IStorageInformation"/>.</typeparam>
-        /// <param name="absolutePath">The absolute path to the storage resource for which information is to be created. Cannot be null or empty.</param>
-        /// <returns>An instance of <typeparamref name="TInfo"/> representing the storage information for the specified path.</returns>
-        /// <exception cref="NotSupportedException">Thrown if <typeparamref name="TInfo"/> is not supported for creation.</exception>
-        public static new TInfo Create<TInfo>(string absolutePath) where TInfo : IStorageInformation
-        {
-            if (typeof(TInfo) == typeof(FileInformation))
-            {
-                return (TInfo)(IStorageInformation)new FileInformation(absolutePath);
-            }
-            else
-            {
-                throw new NotSupportedException($"The type '{typeof(TInfo).FullName}' is not supported for creation.");
-            }
-        }
-
         #region Properties: Core Identity
         /// <summary>
         /// The user-friendly description of the type. This is typically a description of the storage type (e.g., "Text Document").

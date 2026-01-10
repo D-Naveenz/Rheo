@@ -98,7 +98,7 @@ namespace Rheo.Storage.Analysing.Models.Result
         /// Removes the specified subject from the collection and returns its associated confidence value.
         /// </summary>
         /// <param name="subject">The subject to remove from the collection. Must exist in the collection.</param>
-        /// <returns>A Confidence<T> instance representing the removed subject and its confidence percentage.</returns>
+        /// <returns>A <see cref="Confidence{T}"/> instance representing the removed subject and its confidence percentage.</returns>
         /// <exception cref="KeyNotFoundException">Thrown if the specified subject does not exist in the collection.</exception>
         public Confidence<T> Pop(T subject)
         {

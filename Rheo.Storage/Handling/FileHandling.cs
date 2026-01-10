@@ -248,7 +248,6 @@ namespace Rheo.Storage.Handling
             }
 
             // FINALIZATION
-            source.Dispose();   // Dispose the current FileObject to ensure the stored information are correct
             return new FileObject(destination);
         }
 

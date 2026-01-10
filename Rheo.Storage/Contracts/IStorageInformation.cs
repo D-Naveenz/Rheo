@@ -8,14 +8,6 @@ namespace Rheo.Storage.Contracts
     /// </summary>
     public interface IStorageInformation
     {
-        /// <summary>
-        /// Creates a new instance of a storage information object for the specified path.
-        /// </summary>
-        /// <typeparam name="TInfo">The type of storage information to create. Must implement <see cref="IStorageInformation"/>.</typeparam>
-        /// <param name="path">The file system path for which to create the storage information object. Cannot be null or empty.</param>
-        /// <returns>A new instance of <typeparamref name="TInfo"/> representing the storage information for the specified path.</returns>
-        static abstract TInfo Create<TInfo>(string path) where TInfo : IStorageInformation;
-
         #region Core Identity
         /// <summary>
         /// The user-friendly name for the storage. This is typically the name shown in file explorer.

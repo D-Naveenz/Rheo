@@ -33,25 +33,6 @@ namespace Rheo.Storage.Information
             Size = CalculateDirectorySize(_systemDirInfo);
         }
 
-        /// <summary>
-        /// Creates a new instance of the specified storage information type for the given absolute path.
-        /// </summary>
-        /// <typeparam name="TInfo">The type of storage information to create. Must implement <see cref="IStorageInformation"/>.</typeparam>
-        /// <param name="absolutePath">The absolute file system path for which to create the storage information instance. Cannot be null or empty.</param>
-        /// <returns>An instance of <typeparamref name="TInfo"/> representing the storage information for the specified path.</returns>
-        /// <exception cref="NotSupportedException">Thrown if <typeparamref name="TInfo"/> is not supported for creation.</exception>
-        public static new TInfo Create<TInfo>(string absolutePath) where TInfo : IStorageInformation
-        {
-            if (typeof(TInfo) == typeof(DirectoryInformation))
-            {
-                return (TInfo)(IStorageInformation)new DirectoryInformation(absolutePath);
-            }
-            else
-            {
-                throw new NotSupportedException($"The type '{typeof(TInfo).FullName}' is not supported for creation.");
-            }
-        }
-
         #region Properties: Counts
         /// <remarks>This property attempts to retrieve the file count recursively. If the application
         /// does not have the necessary permissions  to access the directory or its subdirectories, the property returns

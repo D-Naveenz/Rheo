@@ -1,5 +1,6 @@
 ﻿using Rheo.Storage.Handling;
 using Rheo.Storage.Information;
+using System.Collections.Concurrent;
 
 namespace Rheo.Storage
 {
@@ -16,6 +17,9 @@ namespace Rheo.Storage
     /// management and error handling are consistent with .NET best practices.</remarks>
     public class DirectoryObject : StorageObject<DirectoryObject, DirectoryInformation>
     {
+        private readonly ConcurrentBag<string> _changedFiles = [];
+        private readonly Timer? _debounceTimer;
+
         private readonly FileSystemWatcher _watcher;
 
         /// <summary>
@@ -37,17 +41,10 @@ namespace Rheo.Storage
             {
                 _watcher = new FileSystemWatcher(path)
                 {
-                    NotifyFilter = NotifyFilters.FileName
-                                 | NotifyFilters.DirectoryName 
-                                 | NotifyFilters.Attributes 
-                                 | NotifyFilters.Size 
-                                 | NotifyFilters.LastWrite 
-                                 | NotifyFilters.LastAccess 
-                                 | NotifyFilters.CreationTime 
-                                 | NotifyFilters.Security,
-
                     IncludeSubdirectories = true,
-                    EnableRaisingEvents = true
+                    NotifyFilter = NotifyFilters.FileName
+                                 | NotifyFilters.Size 
+                                 | NotifyFilters.LastWrite
                 };
 
                 // Event handlers
@@ -56,6 +53,11 @@ namespace Rheo.Storage
                 _watcher.Changed += Watcher_Changed;
                 _watcher.Created += Watcher_Changed;
                 _watcher.Deleted += Watcher_Changed;
+
+                _watcher.EnableRaisingEvents = true;
+
+                // Debounce timer: waits 1 second after last event before processing
+                _debounceTimer = new Timer(OnDebounceTimerTick, _changedFiles, Timeout.Infinite, 1000);
             }
             catch (Exception ex)
             {
@@ -276,11 +278,18 @@ namespace Rheo.Storage
         /// <inheritdoc/>
         public override void Dispose()
         {
-            // Dispose the FileSystemWatcher
+            // Release unmanaged resources
             _watcher.Dispose();
+            _debounceTimer?.Dispose();
 
             base.Dispose();
             GC.SuppressFinalize(this);
+        }
+
+        /// <inheritdoc/>
+        protected override DirectoryInformation CreateInformationInstance()
+        {
+            return new DirectoryInformation(FullPath);
         }
 
         /// <summary>
@@ -307,9 +316,23 @@ namespace Rheo.Storage
 
         private void Watcher_Changed(object sender, FileSystemEventArgs e)
         {
-            var newObject = new DirectoryObject(FullPath);
-            CopyFrom(newObject); // CopyFrom has its own lock
-            newObject.Dispose();
+            // Add the changed file to the collection
+            _changedFiles.Add(e.FullPath);
+
+            // Reset the debounce timer
+            _debounceTimer?.Change(2000, Timeout.Infinite);
+        }
+
+        private void OnDebounceTimerTick(object? state)
+        {
+            var changedFiles = (ConcurrentBag<string>)state!;
+            if (!changedFiles.IsEmpty)
+            {
+                var newObject = new DirectoryObject(FullPath);
+                CopyFrom(newObject); // CopyFrom has its own lock
+                newObject.Dispose();
+                changedFiles.Clear();
+            }
         }
     }
 }

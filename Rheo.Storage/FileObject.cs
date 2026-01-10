@@ -209,5 +209,11 @@ namespace Rheo.Storage
             CopyFrom(newObj);   // CopyFrom has its own lock
             newObj.Dispose();
         }
+
+        /// <inheritdoc/>
+        protected override FileInformation CreateInformationInstance()
+        {
+            return new FileInformation(FullPath);
+        }
     }
 }
