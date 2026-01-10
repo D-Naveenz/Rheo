@@ -1,7 +1,7 @@
 ﻿using MessagePack;
 using System.Text;
 
-namespace Rheo.Storage.FileDefinition.Models
+namespace Rheo.Storage.Analysing.Models
 {
     /// <summary>
     /// Represents a pattern with an associated position and data.
@@ -22,6 +22,7 @@ namespace Rheo.Storage.FileDefinition.Models
         [Key(1)]
         public byte[] Data { get; set; } = [];
 
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"\"{Encoding.ASCII.GetString(Data)}\" at {Position}";

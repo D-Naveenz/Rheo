@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 
-namespace Rheo.Storage.FileDefinition.Models.Result
+namespace Rheo.Storage.Analysing.Models.Result
 {
     /// <summary>
     /// Represents a collection that tracks unique values and their associated confidence scores, allowing items to be
@@ -95,11 +95,11 @@ namespace Rheo.Storage.FileDefinition.Models.Result
         }
 
         /// <summary>
-        /// Removes the specified value from the collection and returns its associated confidence result.
+        /// Removes the specified subject from the collection and returns its associated confidence value.
         /// </summary>
-        /// <param name="subject">The value to remove from the collection. Must exist in the collection.</param>
-        /// <returns>A ConfidenceResult<T> containing the removed value and its associated confidence score.</returns>
-        /// <exception cref="KeyNotFoundException">Thrown if the specified value does not exist in the collection.</exception>
+        /// <param name="subject">The subject to remove from the collection. Must exist in the collection.</param>
+        /// <returns>A Confidence<T> instance representing the removed subject and its confidence percentage.</returns>
+        /// <exception cref="KeyNotFoundException">Thrown if the specified subject does not exist in the collection.</exception>
         public Confidence<T> Pop(T subject)
         {
             if (_dict.Remove(subject, out int value))

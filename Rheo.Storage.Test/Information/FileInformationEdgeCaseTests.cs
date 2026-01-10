@@ -27,7 +27,7 @@ namespace Rheo.Storage.Test.Information
 
             // Assert
             Assert.NotNull(fileInfo);
-            Assert.Equal(0UL, fileInfo.Size);
+            Assert.Equal(0L, fileInfo.Size);
             Assert.NotNull(fileInfo.TypeName);
         }
 

@@ -72,13 +72,13 @@ namespace Rheo.Storage.Test.Information
         public void Size_WithLargeNumberOfFiles_CalculatesCorrectly()
         {
             // Arrange: Create many small files
-            ulong expectedSize = 0;
+            long expectedSize = 0;
             for (int i = 0; i < 100; i++)
             {
                 var filePath = Path.Combine(_testDir.FullPath, $"file{i}.bin");
                 var content = new byte[i + 1];
                 File.WriteAllBytes(filePath, content);
-                expectedSize += (ulong)(i + 1);
+                expectedSize += i + 1;
             }
 
             // Act
@@ -100,7 +100,7 @@ namespace Rheo.Storage.Test.Information
             var dirInfo = new DirectoryInformation(_testDir.FullPath);
 
             // Assert
-            Assert.Equal(1024UL * 1024, dirInfo.Size);
+            Assert.Equal(1024L * 1024, dirInfo.Size);
         }
 
         [Fact]
@@ -208,7 +208,7 @@ namespace Rheo.Storage.Test.Information
             var dirInfo = new DirectoryInformation(_testDir.FullPath);
 
             // Assert
-            Assert.Equal(0UL, dirInfo.Size);
+            Assert.Equal(0L, dirInfo.Size);
         }
 
         [Fact]
@@ -284,8 +284,8 @@ namespace Rheo.Storage.Test.Information
             var dirInfo = new DirectoryInformation(_testDir.FullPath);
 
             // Assert
-            Assert.Equal(2048UL, dirInfo.Size);
-            Assert.IsType<ulong>(dirInfo.Size);
+            Assert.Equal(2048L, dirInfo.Size);
+            Assert.IsType<long>(dirInfo.Size);
         }
 
         [Fact]

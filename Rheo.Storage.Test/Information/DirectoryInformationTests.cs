@@ -159,8 +159,8 @@ namespace Rheo.Storage.Test.Information
                 cancellationToken: TestContext.Current.CancellationToken
                 );
 
-            var expectedSize = (ulong)(new FileInfo(testFile1.FullPath).Length +
-                                       new FileInfo(testFile2.FullPath).Length);
+            var expectedSize = new FileInfo(testFile1.FullPath).Length + 
+                               new FileInfo(testFile2.FullPath).Length;
 
             // Act
             var dirInfo = new DirectoryInformation(subDir.FullPath);
@@ -180,7 +180,7 @@ namespace Rheo.Storage.Test.Information
             var dirInfo = new DirectoryInformation(emptyDirPath);
 
             // Assert
-            Assert.Equal(0UL, dirInfo.Size);
+            Assert.Equal(0L, dirInfo.Size);
         }
 
         [Fact]
@@ -199,7 +199,7 @@ namespace Rheo.Storage.Test.Information
             var subFile = Path.Combine(subDirPath, "nested.bin");
             File.WriteAllBytes(subFile, [0x00, 0x01, 0x02, 0x03]);
 
-            var expectedSize = (ulong)(new FileInfo(rootFile.FullPath).Length + 4);
+            var expectedSize = new FileInfo(rootFile.FullPath).Length + 4;
 
             // Act
             var dirInfo = new DirectoryInformation(masterSubDir.FullPath);

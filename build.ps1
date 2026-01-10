@@ -267,7 +267,7 @@ if ($Publish) {
     try {
         # Use environment variable instead of passing API key on the command line
         $env:NUGET_API_KEY = $ResolvedApiKey
-        dotnet nuget push $PackageFile.FullName --source https://api.nuget.org/v3/index.json --api-key $env:NUGET_API_KEY
+        dotnet nuget push $PackageFile.FullName --source https://api.nuget.org/v3/index.json --api-key $env:NUGET_API_KEY --skip-duplicate
         if ($LASTEXITCODE -ne 0) {
             throw "dotnet nuget push failed with exit code $LASTEXITCODE"
         }

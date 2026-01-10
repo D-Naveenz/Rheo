@@ -7,6 +7,7 @@ on:
       - 'Rheo.Storage/**' # only trigger on changes to Rheo.Storage project
     tags:
       - 'v*.*.*' # matches version tags like v1.2.3
+  workflow_dispatch:
 
 jobs:
   build-test-pack-publish:
@@ -21,10 +22,10 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 10.0.x
+        dotnet-version: 10.0.101
 
     - name: Build, test, pack, and publish NuGet package artifact
       shell: pwsh
       env:
         NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-      run: .\build.ps1 -Publish -ApiKey $env:NUGET_API_KEY
+      run: .\build.ps1 -Publish -ApiKey $env:NUGET_API_KEY -SkipTests

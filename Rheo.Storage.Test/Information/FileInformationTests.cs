@@ -135,7 +135,7 @@ namespace Rheo.Storage.Test.Information
                 ResourceType.Text,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
-            var expectedSize = (ulong)new FileInfo(testFile.FullPath).Length;
+            var expectedSize = new FileInfo(testFile.FullPath).Length;
 
             // Act
             var fileInfo = new FileInformation(testFile.FullPath);

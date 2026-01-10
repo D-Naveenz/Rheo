@@ -1,4 +1,4 @@
-﻿using Rheo.Storage.FileDefinition.Models;
+﻿using Rheo.Storage.Analysing.Models;
 using Spectre.Console;
 
 namespace Rheo.Storage.DefinitionsBuilder.ETL.Validation

@@ -1,4 +1,5 @@
-﻿using System.Security;
+﻿using Rheo.Storage.Contracts;
+using System.Security;
 
 namespace Rheo.Storage.Information
 {
@@ -10,7 +11,7 @@ namespace Rheo.Storage.Information
     /// the number of files, number of subdirectories, and the total size of all files within the directory tree. If the
     /// application lacks sufficient permissions to access parts of the directory, some properties may return fallback
     /// values (such as -1 or 0) to indicate that the operation could not be completed.</remarks>
-    public class DirectoryInformation : StorageInformation, IEquatable<DirectoryInformation>
+    public sealed class DirectoryInformation : StorageInformation, IEquatable<DirectoryInformation>
     {
         private readonly DirectoryInfo _systemDirInfo;
 
@@ -30,6 +31,25 @@ namespace Rheo.Storage.Information
 
             _systemDirInfo = new(absolutePath);
             Size = CalculateDirectorySize(_systemDirInfo);
+        }
+
+        /// <summary>
+        /// Creates a new instance of the specified storage information type for the given absolute path.
+        /// </summary>
+        /// <typeparam name="TInfo">The type of storage information to create. Must implement <see cref="IStorageInformation"/>.</typeparam>
+        /// <param name="absolutePath">The absolute file system path for which to create the storage information instance. Cannot be null or empty.</param>
+        /// <returns>An instance of <typeparamref name="TInfo"/> representing the storage information for the specified path.</returns>
+        /// <exception cref="NotSupportedException">Thrown if <typeparamref name="TInfo"/> is not supported for creation.</exception>
+        public static new TInfo Create<TInfo>(string absolutePath) where TInfo : IStorageInformation
+        {
+            if (typeof(TInfo) == typeof(DirectoryInformation))
+            {
+                return (TInfo)(IStorageInformation)new DirectoryInformation(absolutePath);
+            }
+            else
+            {
+                throw new NotSupportedException($"The type '{typeof(TInfo).FullName}' is not supported for creation.");
+            }
         }
 
         #region Properties: Counts
@@ -79,7 +99,7 @@ namespace Rheo.Storage.Information
 
         #region Properties: Size
         /// <inheritdoc/>
-        public override ulong Size { get; }
+        public override long Size { get; }
 
         #endregion
 
@@ -125,16 +145,16 @@ namespace Rheo.Storage.Information
             return !(left == right);
         }
 
-        private static ulong CalculateDirectorySize(DirectoryInfo systemDirInfo)
+        private static long CalculateDirectorySize(DirectoryInfo systemDirInfo)
         {
             try
             {
-                ulong size = 0;
+                long size = 0;
                 // Add file sizes.
                 FileInfo[] files = systemDirInfo.GetFiles();
                 foreach (FileInfo file in files)
                 {
-                    size += (ulong)file.Length;
+                    size += file.Length;
                 }
                 // Add subdirectory sizes.
                 DirectoryInfo[] dirs = systemDirInfo.GetDirectories();

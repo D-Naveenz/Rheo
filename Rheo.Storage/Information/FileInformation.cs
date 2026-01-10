@@ -1,5 +1,6 @@
-﻿using Rheo.Storage.FileDefinition;
-using Rheo.Storage.FileDefinition.Models.Result;
+﻿using Rheo.Storage.Analysing;
+using Rheo.Storage.Analysing.Models.Result;
+using Rheo.Storage.Contracts;
 
 namespace Rheo.Storage.Information
 {
@@ -12,7 +13,7 @@ namespace Rheo.Storage.Information
     /// metadata, which can provide more accurate identification than relying on file name or extension alone. This
     /// class is typically used when you need to determine the true nature of a file, regardless of its name or
     /// extension.</remarks>
-    public class FileInformation : StorageInformation, IEquatable<FileInformation>
+    public sealed class FileInformation : StorageInformation, IEquatable<FileInformation>
     {
         private readonly TaskCompletionSource<AnalysisResult> _analysisTaskAwaiter;
         private readonly Lazy<AnalysisResult> _identificationReportLazy;
@@ -51,6 +52,25 @@ namespace Rheo.Storage.Information
             });
             
             _identificationReportLazy = new Lazy<AnalysisResult>(() => _analysisTaskAwaiter.Task.GetAwaiter().GetResult());
+        }
+
+        /// <summary>
+        /// Creates a new instance of the specified storage information type for the given absolute path.
+        /// </summary>
+        /// <typeparam name="TInfo">The type of storage information to create. Must implement <see cref="IStorageInformation"/>.</typeparam>
+        /// <param name="absolutePath">The absolute path to the storage resource for which information is to be created. Cannot be null or empty.</param>
+        /// <returns>An instance of <typeparamref name="TInfo"/> representing the storage information for the specified path.</returns>
+        /// <exception cref="NotSupportedException">Thrown if <typeparamref name="TInfo"/> is not supported for creation.</exception>
+        public static new TInfo Create<TInfo>(string absolutePath) where TInfo : IStorageInformation
+        {
+            if (typeof(TInfo) == typeof(FileInformation))
+            {
+                return (TInfo)(IStorageInformation)new FileInformation(absolutePath);
+            }
+            else
+            {
+                throw new NotSupportedException($"The type '{typeof(TInfo).FullName}' is not supported for creation.");
+            }
         }
 
         #region Properties: Core Identity
@@ -114,7 +134,7 @@ namespace Rheo.Storage.Information
 
         #region Properties: Size
         /// <inheritdoc/>
-        public override ulong Size => _storageInfoLazy.Value.Size;
+        public override long Size => (long)_storageInfoLazy.Value.Size;
 
         /// <inheritdoc/>
         public bool Equals(FileInformation? other)

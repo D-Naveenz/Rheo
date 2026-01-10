@@ -1,4 +1,5 @@
-﻿using Rheo.Storage.DefinitionsBuilder.ETL.RIFF;
+﻿using Rheo.Storage.Analysing.Models;
+using Rheo.Storage.DefinitionsBuilder.ETL.RIFF;
 using Rheo.Storage.DefinitionsBuilder.ETL.Sluice;
 using Rheo.Storage.DefinitionsBuilder.ETL.Validation;
 using Rheo.Storage.DefinitionsBuilder.Settings;

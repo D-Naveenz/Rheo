@@ -1,17 +1,18 @@
-﻿using Rheo.Storage.Information;
-using System.Diagnostics;
+﻿using Rheo.Storage.Handling;
+using Rheo.Storage.Information;
 
 namespace Rheo.Storage
 {
     /// <summary>
-    /// Represents a file-based storage object that provides asynchronous operations for copying, moving, renaming, and
-    /// deleting files, as well as access to file metadata.
+    /// Represents a file in the file system and provides methods for file manipulation, including copying, moving,
+    /// deleting, renaming, and reading or writing file data to streams.
     /// </summary>
-    /// <remarks>FileObject enables manipulation of files on disk with support for progress reporting and
-    /// cancellation in asynchronous operations. It ensures that file paths are validated and that operations such as
-    /// copy and move handle cross-volume scenarios appropriately. Events are raised to notify about storage changes.
-    /// This class is not thread-safe; concurrent access to the same instance should be avoided.</remarks>
-    public class FileObject : StorageObject
+    /// <remarks>FileObject instances encapsulate file operations with thread safety and support both
+    /// synchronous and asynchronous workflows. The class ensures that the underlying file exists upon initialization
+    /// and provides mechanisms for progress reporting and cancellation in long-running operations. FileObject is
+    /// designed to be used in scenarios where robust file management and integration with streams are
+    /// required.</remarks>
+    public class FileObject : StorageObject<FileObject, FileInformation>
     {
         /// <summary>
         /// Initializes a new instance of the FileObject class for the specified file path, creating the file if it does
@@ -26,213 +27,187 @@ namespace Rheo.Storage
 
             // Ensure the file exists without holding a stream open
             File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read).Dispose();
+        }
 
-            // Load the information
-            _informationInternal = CreateNewInformationInstance();
+        /// <inheritdoc/>
+        public override string Name
+        {
+            get
+            {
+                lock (Lock)
+                {
+                    return Path.GetFileName(FullPath);
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public override FileObject Copy(string destination, bool overwrite)
+        {
+            ThrowIfDisposed();
+            return FileHandling.Copy(this, destination, overwrite);
+        }
+
+        /// <inheritdoc/>
+        public override FileObject Copy(string destination, IProgress<StorageProgress>? progress, bool overwrite = false)
+        {
+            ThrowIfDisposed();
+            return FileHandling.Copy(this, destination, overwrite, progress);
+        }
+
+        /// <inheritdoc/>
+        public override Task<FileObject> CopyAsync(string destination, bool overwrite, CancellationToken cancellationToken = default)
+        {
+            ThrowIfDisposed();
+
+            return FileHandling.CopyAsync(this, destination, overwrite, null, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public override Task<FileObject> CopyAsync(string destination, IProgress<StorageProgress>? progress, bool overwrite = false, CancellationToken cancellationToken = default)
+        {
+            ThrowIfDisposed();
+            return FileHandling.CopyAsync(this, destination, overwrite, progress, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public override void Delete()
+        {
+            ThrowIfDisposed();
+            FileHandling.Delete(this);
+        }
+
+        /// <inheritdoc/>
+        public override Task DeleteAsync(CancellationToken cancellationToken = default)
+        {
+            ThrowIfDisposed();
+            return FileHandling.DeleteAsync(this, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public override FileObject Move(string destination, bool overwrite)
+        {
+            ThrowIfDisposed();
+            return FileHandling.Move(this, destination, overwrite);
+        }
+
+        /// <inheritdoc/>
+        public override FileObject Move(string destination, IProgress<StorageProgress>? progress, bool overwrite = false)
+        {
+            ThrowIfDisposed();
+            return FileHandling.Move(this, destination, overwrite, progress);
+        }
+
+        /// <inheritdoc/>
+        public override Task<FileObject> MoveAsync(string destination, bool overwrite, CancellationToken cancellationToken = default)
+        {
+            ThrowIfDisposed();
+            return FileHandling.MoveAsync(this, destination, overwrite, null, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public override Task<FileObject> MoveAsync(string destination, IProgress<StorageProgress>? progress, bool overwrite = false, CancellationToken cancellationToken = default)
+        {
+            ThrowIfDisposed();
+            return FileHandling.MoveAsync(this, destination, overwrite, progress, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public override void Rename(string newName)
+        {
+            ThrowIfDisposed();
+
+            // ✅ NO LOCK - FileHandling.Rename already locks
+            var newObj = FileHandling.Rename(this, newName);
+            CopyFrom(newObj);  // CopyFrom has its own lock
+            newObj.Dispose();
+        }
+
+        /// <inheritdoc/>
+        public override async Task RenameAsync(string newName, CancellationToken cancellationToken = default)
+        {
+            ThrowIfDisposed();
+
+            // ❌ REMOVE THE LOCK - FileHandling.RenameAsync already locks!
+            var newObj = await FileHandling.RenameAsync(this, newName, cancellationToken);
+            
+            CopyFrom(newObj);   // CopyFrom has its own lock
+            newObj.Dispose();
         }
 
         /// <summary>
-        /// Gets metadata information about the storage object, such as size, attributes, and timestamps.
+        /// Writes the current object's data to the specified stream, optionally overwriting existing content.
         /// </summary>
-        public FileInformation Information => (FileInformation)_informationInternal!;
-
-        /// <inheritdoc/>
-        public override string Name => Path.GetFileName(FullPath);
-
-        /// <inheritdoc/>
-        public override async Task CopyAsync(
-            string destination,
-            bool overwrite = false,
-            int maxConcurrent = 4,
-            IProgress<StorageProgress>? progress = null,
-            CancellationToken cancellationToken = default)
+        public void Write(Stream stream, bool overwrite = true)
         {
-            ProcessDestinationPath(ref destination, overwrite);
-            var bufferSize = (int)GetBufferSize(Information.Size);
+            ThrowIfDisposed();
 
-            using var sourceStream = new FileStream(
-                FullPath,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.Read,
-                bufferSize,
-                true);
-
-            using var destStream = new FileStream(
-                destination,
-                overwrite ? FileMode.Create : FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize,
-                true);
-
-            long totalBytes = sourceStream.Length;
-            long totalBytesRead = 0;
-            Stopwatch stopwatch = Stopwatch.StartNew();
-
-            // Use a semaphore to throttle concurrent buffer reads/writes
-            using var semaphore = new SemaphoreSlim(maxConcurrent > 0 ? maxConcurrent : 1);
-
-            byte[] buffer = new byte[bufferSize];
-            int bytesRead;
-
-            while ((bytesRead = await sourceStream.ReadAsync(buffer, cancellationToken)) > 0)
-            {
-                await semaphore.WaitAsync(cancellationToken);
-                try
-                {
-                    await destStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
-                    totalBytesRead += bytesRead;
-
-                    if (progress != null)
-                    {
-                        double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
-                        double bytesPerSecond = elapsedSeconds > 0 ? totalBytesRead / elapsedSeconds : 0;
-                        progress.Report(new StorageProgress
-                        {
-                            TotalBytes = totalBytes,
-                            BytesTransferred = totalBytesRead,
-                            BytesPerSecond = bytesPerSecond
-                        });
-                    }
-                }
-                finally
-                {
-                    semaphore.Release();
-                }
-
-                if (cancellationToken.IsCancellationRequested)
-                    break;
-            }
-
-            // Raise the Event
-            OnStorageChanged(new(destination, StorageChangeType.Created));
-        }
-
-        /// <inheritdoc/>
-        public override Task DeleteAsync()
-        {
-            var task = Task.Run(() =>
-            {
-                File.Delete(FullPath);
-            });
-
-            // Raise the Event
-            OnStorageChanged(new(FullPath, StorageChangeType.Deleted));
-
-            return task;
-        }
-
-        /// <inheritdoc/>
-        public override async Task MoveAsync(
-            string destination,
-            bool overwrite = false,
-            int maxConcurrent = 4,
-            IProgress<StorageProgress>? progress = null,
-            CancellationToken cancellationToken = default)
-        {
-            ProcessDestinationPath(ref destination, overwrite);
-
-            if (AreOnSameVolume(FullPath, destination))
-            {
-                // Same volume move - fast operation (just directory entry update)
-                if (overwrite && File.Exists(destination))
-                {
-                    File.Delete(destination);
-                }
-
-                // Use Task.Run for async context and cancellation support
-                await Task.Run(() =>
-                {
-                    File.Move(FullPath, destination, overwrite);
-                }, cancellationToken);
-
-                progress?.Report(new StorageProgress
-                {
-                    TotalBytes = 1,
-                    BytesTransferred = 1,
-                    BytesPerSecond = 0
-                });
-            }
-            else
-            {
-                // Cross-volume move - requires copy then delete
-                await CopyAsync(destination, overwrite, maxConcurrent, progress, cancellationToken);
-                await DeleteAsync();
-            }
-
-            // Raise the Event
-            OnStorageChanged(new(destination, StorageChangeType.Relocated));
-        }
-
-        /// <inheritdoc/>
-        public override async Task RenameAsync(string newName)
-        {
-            // Check if the name is null, empty, or whitespace
-            if (string.IsNullOrWhiteSpace(newName))
-            {
-                throw new ArgumentException("The name cannot be null, empty, or whitespace.", nameof(newName));
-            }
-
-            // Verify the name does not contain invalid characters
-            var invalidChars = Path.GetInvalidPathChars();
-            if (newName.IndexOfAny(invalidChars) >= 0)
-            {
-                throw new ArgumentException("The name contains invalid characters.", nameof(newName));
-            }
-
-            string newPath = Path.Combine(Path.GetDirectoryName(FullPath) ?? throw new InvalidOperationException("Directory name is null"), newName);
-            if (File.Exists(newPath))
-            {
-                throw new IOException($"A file with the name '{newName}' already exists.");
-            }
-
-            // Perform the rename (move)
-            await Task.Run(() => File.Move(FullPath, newPath));
-
-            // Raise the Event
-            OnStorageChanged(new(newPath, StorageChangeType.Relocated));
-        }
-
-        /// <inheritdoc/>
-        protected override FileInformation CreateNewInformationInstance()
-        {
-            return new FileInformation(FullPath);
+            // ✅ NO LOCK - FileHandling.Write already locks
+            var newObj = FileHandling.Write(this, stream, overwrite, null);
+            CopyFrom(newObj);
+            newObj.Dispose();
         }
 
         /// <summary>
-        /// Validates the specified file path and returns its fully qualified path. Throws an exception if the path
-        /// refers to an existing directory.
+        /// Writes the current object's data to the specified stream with progress reporting.
         /// </summary>
-        /// <param name="path">The file path to validate. This should refer to a file, not a directory.</param>
-        /// <returns>A fully qualified file path if the specified path is valid and does not refer to an existing directory.</returns>
-        /// <exception cref="ArgumentException">Thrown if the specified path points to an existing directory.</exception>
-        protected override string GetValidPath(string path)
+        public void Write(Stream stream, IProgress<StorageProgress> progress, bool overwrite = true)
         {
-            var fullPath = base.GetValidPath(path);
+            ThrowIfDisposed();
 
-            // Check the path is point to an existing folder. If yes, the path should be invalid
-            if (Directory.Exists(fullPath))
-            {
-                throw new ArgumentException(
-                    "The specified path points to an existing directory. Please provide a valid file path, not a directory.",
-                    nameof(path)
-                );
-            }
-
-            return fullPath;
+            // ✅ NO LOCK - FileHandling.Write already locks
+            var newObj = FileHandling.Write(this, stream, overwrite, progress);
+            CopyFrom(newObj);
+            newObj.Dispose();
         }
 
-
-        /// <inheritdoc/>
-        protected override void ProcessDestinationPath(ref string destination, bool overwrite = false)
+        /// <summary>
+        /// Asynchronously writes the current object's data to the specified stream, optionally overwriting existing
+        /// content.
+        /// </summary>
+        /// <remarks>This method is thread-safe. The underlying file operation is protected by an internal
+        /// semaphore to prevent concurrent access to the same file.</remarks>
+        /// <param name="stream">The target stream to which the object's data will be written. Must be writable and remain open for the
+        /// duration of the operation.</param>
+        /// <param name="overwrite">Specifies whether to overwrite existing content in the stream. Set to <see langword="true"/> to overwrite;
+        /// otherwise, <see langword="false"/> to append or preserve existing data.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous write operation.</param>
+        /// <returns>A task that represents the asynchronous write operation.</returns>
+        public async Task WriteAsync(Stream stream, bool overwrite = true, CancellationToken cancellationToken = default)
         {
-            base.ProcessDestinationPath(ref destination, overwrite);
+            ThrowIfDisposed();
 
-            // Combine the destination directory with the current file name
-            destination = Path.Combine(destination, Name);
-            if (!overwrite && File.Exists(destination))
-                throw new IOException("File already exists.");
+            // ❌ REMOVE THE LOCK - FileHandling.WriteAsync already locks!
+            var newObj = await FileHandling.WriteAsync(this, stream, overwrite, null, cancellationToken);
+
+            CopyFrom(newObj);   // CopyFrom has its own lock
+            newObj.Dispose();
+        }
+
+        /// <summary>
+        /// Asynchronously writes the current object's data to the specified stream, optionally reporting progress and
+        /// controlling overwrite behavior.
+        /// </summary>
+        /// <remarks>The write operation is thread-safe. An internal semaphore ensures that concurrent operations
+        /// on the same file are properly serialized.</remarks>
+        /// <param name="stream">The destination stream to which the object's data will be written. Must be writable and remain open for the
+        /// duration of the operation.</param>
+        /// <param name="progress">An optional progress reporter that receives updates about the write operation. If null, no progress will be
+        /// reported.</param>
+        /// <param name="overwrite">A value indicating whether existing data in the destination should be overwritten. If <see
+        /// langword="true"/>, any existing data will be replaced; otherwise, the operation may fail if data already
+        /// exists.</param>
+        /// <param name="cancellationToken">A token that can be used to cancel the asynchronous write operation.</param>
+        /// <returns>A task that represents the asynchronous write operation.</returns>
+        public async Task WriteAsync(Stream stream, IProgress<StorageProgress>? progress, bool overwrite = true, CancellationToken cancellationToken = default)
+        {
+            ThrowIfDisposed();
+
+            // ❌ REMOVE THE LOCK - FileHandling.WriteAsync already locks!
+            var newObj = await FileHandling.WriteAsync(this, stream, overwrite, progress, cancellationToken);
+
+            CopyFrom(newObj);   // CopyFrom has its own lock
+            newObj.Dispose();
         }
     }
 }
