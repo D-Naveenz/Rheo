@@ -25,11 +25,7 @@ namespace Rheo.Storage
         
         private bool _disposed;
         private readonly SemaphoreSlim _stateLockingSemaphore = new(1, 1);
-
-        /// <summary>
-        /// Provides a lock object to synchronize access to the internal state of the storage object.
-        /// </summary>
-        protected readonly Lock _stateLock = new();
+        private readonly Lock _stateLock = new();
 
         /// <summary>
         /// Initializes a new instance of the StorageObject class for the specified file or path.
@@ -74,6 +70,8 @@ namespace Rheo.Storage
         public string FullPath { get; protected set; }
 
         internal SemaphoreSlim Semaphore => _stateLockingSemaphore;
+
+        internal Lock Lock => _stateLock;
 
         #endregion
 

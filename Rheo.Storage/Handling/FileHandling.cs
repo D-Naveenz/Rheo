@@ -28,35 +28,32 @@ namespace Rheo.Storage.Handling
         {
             // INITIALIZATION
             ProcessDestinationPath(ref destination, source.Name, overwrite);
-            var _lock = source.Semaphore;
             var bufferSize = source.GetBufferSize();
 
             // OPERATION
-            _lock.Wait();
-            try
+            lock(source.Lock)
             {
-                using var sourceStream = new FileStream(
-                    source.FullPath,
-                    FileMode.Open,
-                    FileAccess.Read,
-                    FileShare.Read,
-                    bufferSize,
-                    FileOptions.SequentialScan);
+                try
+                {
+                    using var sourceStream = new FileStream(
+                        source.FullPath,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.Read,
+                        bufferSize,
+                        FileOptions.SequentialScan);
 
-                CopyStreamToFile(
-                    sourceStream,
-                    destination,
-                    overwrite,
-                    bufferSize,
-                    progress);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                throw new InvalidOperationException($"Failed to copy file to: {destination}", ex);
-            }
-            finally
-            {
-                _lock.Release();
+                    CopyStreamToFile(
+                        sourceStream,
+                        destination,
+                        overwrite,
+                        bufferSize,
+                        progress);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    throw new InvalidOperationException($"Failed to copy file to: {destination}", ex);
+                }
             }
 
             // FINALIZATION
@@ -73,23 +70,19 @@ namespace Rheo.Storage.Handling
         /// <exception cref="InvalidOperationException">Thrown if the file cannot be deleted due to an I/O error or insufficient permissions.</exception>
         public static void Delete(FileObject file)
         {
-            var _lock = file.Semaphore;
+            lock(file.Lock)
+            {
+                try
+                {
+                    File.Delete(file.FullPath);
 
-            _lock.Wait();
-            try
-            {
-                File.Delete(file.FullPath);
-
-                // Dispose the current FileObject to ensure the stored information are correct
-                file.Dispose();
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                throw new InvalidOperationException($"Failed to delete file: {file.FullPath}", ex);
-            }
-            finally
-            {
-                _lock.Release();
+                    // Dispose the current FileObject to ensure the stored information are correct
+                    file.Dispose();
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    throw new InvalidOperationException($"Failed to delete file: {file.FullPath}", ex);
+                }
             }
         }
 
@@ -119,39 +112,36 @@ namespace Rheo.Storage.Handling
         {
             // INITIALIZATION
             ProcessDestinationPath(ref destination, source.Name, overwrite);
-            var _lock = source.Semaphore;
 
             // OPERATION
-            _lock.Wait();
-            try
+            lock(source.Lock)
             {
-                if (source.IsInTheSameRoot(destination))
+                try
                 {
-                    // Same volume move - fast operation (just directory entry update)
-                    File.Move(source.FullPath, destination, overwrite);
-
-                    // Dispose the current FileObject to ensure the stored information are correct
-                    source.Dispose();
-
-                    // Send final progress update
-                    progress?.Report(new StorageProgress
+                    if (source.IsInTheSameRoot(destination))
                     {
-                        TotalBytes = 1,
-                        BytesTransferred = 1,
-                        BytesPerSecond = 0
-                    });
+                        // Same volume move - fast operation (just directory entry update)
+                        File.Move(source.FullPath, destination, overwrite);
 
-                    // FINALIZATION
-                    return new FileObject(destination);
+                        // Dispose the current FileObject to ensure the stored information are correct
+                        source.Dispose();
+
+                        // Send final progress update
+                        progress?.Report(new StorageProgress
+                        {
+                            TotalBytes = 1,
+                            BytesTransferred = 1,
+                            BytesPerSecond = 0
+                        });
+
+                        // FINALIZATION
+                        return new FileObject(destination);
+                    }
                 }
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                throw new InvalidOperationException($"Failed to move file to: {destination}", ex);
-            }
-            finally
-            {
-                _lock.Release();
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    throw new InvalidOperationException($"Failed to move file to: {destination}", ex);
+                }
             }
 
             // Cross-volume move - release lock before calling nested operations
@@ -191,24 +181,21 @@ namespace Rheo.Storage.Handling
             // INITIALIZATION
             var destination = Path.Combine(source.ParentDirectory, newName);
             ProcessDestinationPath(ref destination, newName, false);
-            var _lock = source.Semaphore;
 
             // OPERATION
-            _lock.Wait();
-            try
+            lock(source.Lock)
             {
-                File.Move(source.FullPath, destination, false);
+                try
+                {
+                    File.Move(source.FullPath, destination, false);
 
-                // Dispose the current FileObject to ensure the stored information are correct
-                // source.Dispose();
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                throw new InvalidOperationException($"Failed to rename file to: {newName}", ex);
-            }
-            finally
-            {
-                _lock.Release();
+                    // Dispose the current FileObject to ensure the stored information are correct
+                    // source.Dispose();
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    throw new InvalidOperationException($"Failed to rename file to: {newName}", ex);
+                }
             }
 
             // FINALIZATION
@@ -237,31 +224,28 @@ namespace Rheo.Storage.Handling
             IProgress<StorageProgress>? progress = null)
         {
             // INITIALIZATION
-            var _lock = source.Semaphore;
             var bufferSize = source.GetBufferSize();
             var destination = source.FullPath;
 
             // OPERATION
-            _lock.Wait();
-            try
+            lock(source.Lock)
             {
-                // Ensure we start reading from the beginning
-                sourceStream.Seek(0, SeekOrigin.Begin);
+                try
+                {
+                    // Ensure we start reading from the beginning
+                    sourceStream.Seek(0, SeekOrigin.Begin);
 
-                CopyStreamToFile(
-                    sourceStream,
-                    destination,
-                    overwrite,
-                    bufferSize,
-                    progress);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                throw new InvalidOperationException($"Failed to write to file: {destination}", ex);
-            }
-            finally
-            {
-                _lock.Release();
+                    CopyStreamToFile(
+                        sourceStream,
+                        destination,
+                        overwrite,
+                        bufferSize,
+                        progress);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    throw new InvalidOperationException($"Failed to write to file: {destination}", ex);
+                }
             }
 
             // FINALIZATION

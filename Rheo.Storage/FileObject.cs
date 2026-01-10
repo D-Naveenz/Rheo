@@ -34,7 +34,7 @@ namespace Rheo.Storage
         {
             get
             {
-                lock (_stateLock)
+                lock (Lock)
                 {
                     return Path.GetFileName(FullPath);
                 }
@@ -117,12 +117,10 @@ namespace Rheo.Storage
         {
             ThrowIfDisposed();
 
-            lock (_stateLock)  // ✅ Protect the entire operation
-            {
-                var newObj = FileHandling.Rename(this, newName);
-                CopyFrom(newObj);
-                newObj.Dispose();
-            }
+            // ✅ NO LOCK - FileHandling.Rename already locks
+            var newObj = FileHandling.Rename(this, newName);
+            CopyFrom(newObj);  // CopyFrom has its own lock
+            newObj.Dispose();
         }
 
         /// <inheritdoc/>
@@ -140,48 +138,27 @@ namespace Rheo.Storage
         /// <summary>
         /// Writes the current object's data to the specified stream, optionally overwriting existing content.
         /// </summary>
-        /// <remarks>This method is thread-safe and updates the current object to reflect any changes made
-        /// during the write operation. The stream is not closed or disposed by this method.</remarks>
-        /// <param name="stream">The stream to which the object's data will be written. Must be writable and remain open for the duration of
-        /// the operation.</param>
-        /// <param name="overwrite">Specifies whether to overwrite existing content in the stream. Set to <see langword="true"/> to overwrite;
-        /// otherwise, set to <see langword="false"/> to preserve existing content.</param>
         public void Write(Stream stream, bool overwrite = true)
         {
             ThrowIfDisposed();
 
-            lock (_stateLock)  // ✅ Protect the entire operation
-            {
-                var newObj = FileHandling.Write(this, stream, overwrite, null);
-
-                CopyFrom(newObj);   // Update current object to reflect the changes
-                newObj.Dispose();   // Dispose the temporary object
-            }
+            // ✅ NO LOCK - FileHandling.Write already locks
+            var newObj = FileHandling.Write(this, stream, overwrite, null);
+            CopyFrom(newObj);
+            newObj.Dispose();
         }
 
         /// <summary>
-        /// Writes the current object's data to the specified stream, optionally overwriting existing content and
-        /// reporting progress.
+        /// Writes the current object's data to the specified stream with progress reporting.
         /// </summary>
-        /// <remarks>This method is thread-safe and updates the current object to reflect the written
-        /// data. The stream is not closed or disposed by this method.</remarks>
-        /// <param name="stream">The destination stream to which the object's data will be written. Must be writable and remain open for the
-        /// duration of the operation.</param>
-        /// <param name="overwrite">Specifies whether to overwrite existing content in the destination stream. If <see langword="true"/>, any
-        /// existing data will be replaced; otherwise, the operation may fail if the stream is not empty.</param>
-        /// <param name="progress">An optional progress reporter that receives updates about the write operation. Can be <see langword="null"/>
-        /// if progress reporting is not required.</param>
         public void Write(Stream stream, IProgress<StorageProgress> progress, bool overwrite = true)
         {
             ThrowIfDisposed();
 
-            lock (_stateLock)  // ✅ Protect the entire operation
-            {
-                var newObj = FileHandling.Write(this, stream, overwrite, progress);
-
-                CopyFrom(newObj);   // Update current object to reflect the changes
-                newObj.Dispose();   // Dispose the temporary object
-            }
+            // ✅ NO LOCK - FileHandling.Write already locks
+            var newObj = FileHandling.Write(this, stream, overwrite, progress);
+            CopyFrom(newObj);
+            newObj.Dispose();
         }
 
         /// <summary>
