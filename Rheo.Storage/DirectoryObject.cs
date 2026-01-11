@@ -17,6 +17,11 @@ namespace Rheo.Storage
     /// management and error handling are consistent with .NET best practices.</remarks>
     public class DirectoryObject : StorageObject<DirectoryObject, DirectoryInformation>
     {
+        /// <summary>
+        /// The default interval, in milliseconds, used to debounce file system watcher events when monitoring directory changes.
+        /// </summary>
+        public const int DefaultWatchInterval = 500; // milliseconds
+
         private readonly ConcurrentBag<string> _changedFiles = [];
         private readonly Timer? _debounceTimer;
         private readonly FileSystemWatcher _watcher;
@@ -26,7 +31,7 @@ namespace Rheo.Storage
         /// using a default watch interval of 500 milliseconds.
         /// </summary>
         /// <param name="path">The full path of the directory to monitor. Cannot be null or empty.</param>
-        public DirectoryObject(string path) : this(path, 500)
+        public DirectoryObject(string path) : this(path, DefaultWatchInterval)
         {
         }
 

@@ -6,12 +6,8 @@ namespace Rheo.Storage.Test.Analysing
 {
     [Trait(TestTraits.Feature, "FileAnalyzer")]
     [Trait(TestTraits.Category, "Default Tests")]
-    public class FileAnalyzerTests(TestDirectoryFixture fileAnalyzerFixture) : IClassFixture<TestDirectoryFixture>
+    public class FileAnalyzerTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
     {
-        private readonly TestDirectoryFixture _fileAnalyzerFixture = fileAnalyzerFixture;
-        
-        private TestDirectory TestDir => _fileAnalyzerFixture.TestDir;
-
         [Fact]
         public void AnalyzeFile_WithNonExistentFile_ReturnsEmptyList()
         {

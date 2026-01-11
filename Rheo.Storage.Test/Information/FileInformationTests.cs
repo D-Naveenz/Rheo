@@ -6,12 +6,8 @@ namespace Rheo.Storage.Test.Information
 {
     [Trait(TestTraits.Feature, "FileInformation")]
     [Trait(TestTraits.Category, "Default Tests")]
-    public class FileInformationTests(TestDirectoryFixture fixture) : IClassFixture<TestDirectoryFixture>
+    public class FileInformationTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
     {
-        private readonly TestDirectoryFixture _fixture = fixture;
-
-        private TestDirectory TestDir => _fixture.TestDir;
-
         [Fact]
         public async Task Constructor_WithValidFilePath_CreatesInstanceAsync()
         {

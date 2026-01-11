@@ -26,4 +26,10 @@ namespace Rheo.Storage.Test
             GC.SuppressFinalize(this);
         }
     }
+
+    [CollectionDefinition("SharedTestDirectoryCollection")]
+    public class SharedTestDirectoryCollection : ICollectionFixture<TestDirectoryFixture>
+    {
+        // No code here, just the definition
+    }
 }

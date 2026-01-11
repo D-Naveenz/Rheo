@@ -5,11 +5,8 @@ namespace Rheo.Storage.Test.Handling;
 
 [Trait(TestTraits.Feature, "FileObject")]
 [Trait(TestTraits.Category, "Storage Operations")]
-public class FileObjectTests(TestDirectoryFixture fixture) : IClassFixture<TestDirectoryFixture>
+public class FileObjectTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
 {
-    private readonly TestDirectoryFixture _fixture = fixture;
-    private TestDirectory TestDir => _fixture.TestDir;
-
     #region Constructor Tests
 
     [Fact]
@@ -278,8 +275,7 @@ public class FileObjectTests(TestDirectoryFixture fixture) : IClassFixture<TestD
     public async Task Rename_WithValidName_RenamesFile()
     {
         // Arrange
-        var subDir = TestDir.CreateSubdirectory("rename_withvalidname");
-        var sourceFile = await subDir.CreateTestFileAsync(ResourceType.Text, cancellationToken: TestContext.Current.CancellationToken);
+        var sourceFile = await TestDir.CreateTestFileAsync(ResourceType.Text, cancellationToken: TestContext.Current.CancellationToken);
         var originalPath = sourceFile.FullPath;
         var newName = "renamed.txt";
 
@@ -288,7 +284,7 @@ public class FileObjectTests(TestDirectoryFixture fixture) : IClassFixture<TestD
 
         // Assert
         Assert.False(File.Exists(originalPath));
-        Assert.True(File.Exists(Path.Combine(subDir.FullPath, newName)));
+        Assert.True(File.Exists(Path.Combine(TestDir.FullPath, newName)));
         Assert.Equal(newName, sourceFile.Name);
     }
 
