@@ -5,21 +5,14 @@ namespace Rheo.Storage.Test.Handling;
 
 [Trait(TestTraits.Feature, "DirectoryObject")]
 [Trait(TestTraits.Category, "Edge Case Tests")]
-public class DirectoryObjectEdgeCaseTests : IDisposable
+public class DirectoryObjectEdgeCaseTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
 {
-    private readonly TestDirectory _testDir;
-
-    public DirectoryObjectEdgeCaseTests()
-    {
-        _testDir = TestDirectory.Create();
-    }
-
     [Fact]
     public void Copy_EmptyDirectory_CreatesEmptyDirectory()
     {
         // Arrange
-        var sourceDir = _testDir.CreateSubdirectory("empty_source");
-        var destParent = _testDir.CreateSubdirectory("empty_dest");
+        var sourceDir = TestDirectory.CreateSubdirectory("empty_source");
+        var destParent = TestDirectory.CreateSubdirectory("empty_dest");
 
         // Act
         using var copiedDir = sourceDir.Copy(destParent.FullPath, overwrite: false);
@@ -33,16 +26,15 @@ public class DirectoryObjectEdgeCaseTests : IDisposable
     public async Task Copy_DeepHierarchy_PreservesStructure()
     {
         // Arrange
-        var sourceDir = _testDir.CreateSubdirectory("deep_source");
-        var level1 = sourceDir.CreateSubdirectory("level1");
+        var level1 = TestDirectory.CreateSubdirectory("level1");
         var level2 = level1.CreateSubdirectory("level2");
         var level3 = level2.CreateSubdirectory("level3");
         await level3.CreateTestFileAsync(ResourceType.Text, cancellationToken: TestContext.Current.CancellationToken);
 
-        var destParent = _testDir.CreateSubdirectory("deep_dest");
+        var destParent = TestDirectory.CreateSubdirectory("deep_dest");
 
         // Act
-        using var copiedDir = sourceDir.Copy(destParent.FullPath, overwrite: false);
+        using var copiedDir = TestDirectory.Copy(destParent.FullPath, overwrite: false);
 
         // Assert
         var deepestFile = copiedDir.GetFiles("*", SearchOption.AllDirectories);
@@ -54,11 +46,11 @@ public class DirectoryObjectEdgeCaseTests : IDisposable
     public void Copy_ToSameLocation_CreatesNumberedCopy()
     {
         // Arrange
-        var sourceDir = _testDir.CreateSubdirectory("original_dir");
+        var parentDir = TestDirectoryParent.FullPath;
 
         // Act
-        using var copy1 = sourceDir.Copy(_testDir.FullPath, overwrite: false);
-        using var copy2 = sourceDir.Copy(_testDir.FullPath, overwrite: false);
+        using var copy1 = TestDirectory.Copy(parentDir, overwrite: false);
+        using var copy2 = TestDirectory.Copy(parentDir, overwrite: false);
 
         // Assert
         Assert.Contains("(1)", copy1.Name);
@@ -69,28 +61,28 @@ public class DirectoryObjectEdgeCaseTests : IDisposable
     public void Move_ToNonExistentPath_CreatesPath()
     {
         // Arrange
-        var sourceDir = _testDir.CreateSubdirectory("move_source");
-        var newPath = Path.Combine(_testDir.FullPath, "new", "nested", "path");
+        var sourceDir = TestDirectory.CreateSubdirectory();
+        var newPath = Path.Combine(TestDirectory.FullPath, "new", "nested", "path");
 
         // Act
         using var movedDir = sourceDir.Move(newPath, overwrite: false);
 
         // Assert
-        Assert.True(Directory.Exists(Path.GetDirectoryName(movedDir.FullPath)));
+        Assert.True(Directory.Exists(movedDir.ParentDirectory));
     }
 
     [Fact]
     public async Task CopyAsync_WithCancellation_CleansUpPartialCopy()
     {
         // Arrange
-        var sourceDir = _testDir.CreateSubdirectory("cancel_source");
+        var sourceDir = TestDirectory.CreateSubdirectory("cancel_source");
         // Create multiple large files to ensure operation takes time
         for (int i = 0; i < 5; i++)
         {
             await sourceDir.CreateTestFileAsync(ResourceType.Video, cancellationToken: TestContext.Current.CancellationToken);
         }
 
-        var destParent = _testDir.CreateSubdirectory("cancel_dest");
+        var destParent = TestDirectory.CreateSubdirectory("cancel_dest");
         using var cts = new CancellationTokenSource();
 
         // Track when the copy actually starts working
@@ -127,7 +119,7 @@ public class DirectoryObjectEdgeCaseTests : IDisposable
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await copyTask);
 
         // Verify cleanup - destination should be removed
-        var potentialDestPath = Path.Combine(destParent.FullPath, sourceDir.Name);
+        var potentialDestPath = Path.Combine(destParent.FullPath, TestDirectory.Name);
         Assert.False(Directory.Exists(potentialDestPath));
     }
 
@@ -135,13 +127,11 @@ public class DirectoryObjectEdgeCaseTests : IDisposable
     public void GetFile_FromSubdirectory_ReturnsCorrectFile()
     {
         // Arrange
-        var testDir = _testDir.CreateSubdirectory("getfile_sub_test");
-        var subDir = testDir.CreateSubdirectory("sub");
-        var filePath = Path.Combine(subDir.FullPath, "test.txt");
+        var filePath = Path.Combine(TestDirectory.FullPath, "test.txt");
         File.WriteAllText(filePath, "content");
 
         // Act
-        using var fileObj = testDir.GetFile(Path.Combine("sub", "test.txt"));
+        using var fileObj = TestDirectoryParent.GetFile(Path.Combine(TestDirectory.Name, "test.txt"));
 
         // Assert
         Assert.Equal(filePath, fileObj.FullPath);
@@ -151,12 +141,11 @@ public class DirectoryObjectEdgeCaseTests : IDisposable
     public void GetDirectory_FromNestedPath_ReturnsCorrectDirectory()
     {
         // Arrange
-        var testDir = _testDir.CreateSubdirectory("getdir_nested_test");
-        var level1 = testDir.CreateSubdirectory("level1");
+        var level1 = TestDirectory.CreateSubdirectory("level1");
         var level2 = level1.CreateSubdirectory("level2");
 
         // Act
-        using var dirObj = testDir.GetDirectory(Path.Combine("level1", "level2"));
+        using var dirObj = TestDirectory.GetDirectory(Path.Combine("level1", "level2"));
 
         // Assert
         Assert.Equal(level2.FullPath, dirObj.FullPath);
@@ -166,17 +155,18 @@ public class DirectoryObjectEdgeCaseTests : IDisposable
     public async Task Delete_WithReadOnlyFile_ThrowsInvalidOperationException()
     {
         // Arrange
-        var testDir = _testDir.CreateSubdirectory("delete_readonly_test");
-        var testFile = await testDir.CreateTestFileAsync(ResourceType.Text, cancellationToken: TestContext.Current.CancellationToken);
+        var testFile = await TestDirectory.CreateTestFileAsync(ResourceType.Text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Make file read-only
-        var fileInfo = new FileInfo(testFile.FullPath);
-        fileInfo.IsReadOnly = true;
+        var fileInfo = new FileInfo(testFile.FullPath)
+        {
+            IsReadOnly = true
+        };
 
         try
         {
             // Act & Assert
-            Assert.Throws<InvalidOperationException>(() => testDir.Delete());
+            Assert.Throws<InvalidOperationException>(() => TestDirectory.Delete());
         }
         finally
         {
@@ -189,25 +179,24 @@ public class DirectoryObjectEdgeCaseTests : IDisposable
     public void Rename_WithLongName_HandlesCorrectly()
     {
         // Arrange
-        var testDir = _testDir.CreateSubdirectory("rename_long");
         var longName = new string('a', 100); // Long but valid name
 
         // Act
-        testDir.Rename(longName);
+        TestDirectory.Rename(longName);
 
         // Assert
-        Assert.Equal(longName, testDir.Name);
-        Assert.True(Directory.Exists(testDir.FullPath));
+        Assert.Equal(longName, TestDirectory.Name);
+        Assert.True(Directory.Exists(TestDirectory.FullPath));
     }
 
     [Fact]
     public async Task Move_WithOverwrite_ReplacesDestination()
     {
         // Arrange
-        var sourceDir = _testDir.CreateSubdirectory("move_overwrite_source");
+        var sourceDir = TestDirectory.CreateSubdirectory("move_overwrite_source");
         await sourceDir.CreateTestFileAsync(ResourceType.Text, cancellationToken: TestContext.Current.CancellationToken);
 
-        var destParent = _testDir.CreateSubdirectory("move_overwrite_parent");
+        var destParent = TestDirectory.CreateSubdirectory("move_overwrite_parent");
         var existingDir = destParent.CreateSubdirectory(sourceDir.Name);
         await existingDir.CreateTestFileAsync(ResourceType.Binary, cancellationToken: TestContext.Current.CancellationToken);
 
@@ -218,11 +207,5 @@ public class DirectoryObjectEdgeCaseTests : IDisposable
         Assert.True(Directory.Exists(movedDir.FullPath));
         // Should only have files from source
         Assert.Single(movedDir.GetFiles());
-    }
-
-    public void Dispose()
-    {
-        _testDir?.Dispose();
-        GC.SuppressFinalize(this);
     }
 }

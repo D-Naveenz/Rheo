@@ -58,7 +58,6 @@ namespace Rheo.Storage.Test.Models
             var dirName = string.IsNullOrWhiteSpace(name) ? $"Subdir_{Guid.NewGuid():N}" : name;
             var subdirPath = Path.Combine(FullPath, dirName);
 
-            Directory.CreateDirectory(subdirPath);
             var subdir = new TestDirectory(subdirPath);
 
             TestDirectories.Add(subdir);

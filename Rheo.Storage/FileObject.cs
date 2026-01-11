@@ -194,14 +194,14 @@ namespace Rheo.Storage
         /// on the same file are properly serialized.</remarks>
         /// <param name="stream">The destination stream to which the object's data will be written. Must be writable and remain open for the
         /// duration of the operation.</param>
-        /// <param name="progress">An optional progress reporter that receives updates about the write operation. If null, no progress will be
+        /// <param name="progress">An progress reporter that receives updates about the write operation.
         /// reported.</param>
         /// <param name="overwrite">A value indicating whether existing data in the destination should be overwritten. If <see
         /// langword="true"/>, any existing data will be replaced; otherwise, the operation may fail if data already
         /// exists.</param>
         /// <param name="cancellationToken">A token that can be used to cancel the asynchronous write operation.</param>
         /// <returns>A task that represents the asynchronous write operation.</returns>
-        public async Task WriteAsync(Stream stream, IProgress<StorageProgress>? progress, bool overwrite = true, CancellationToken cancellationToken = default)
+        public async Task WriteAsync(Stream stream, IProgress<StorageProgress> progress, bool overwrite = true, CancellationToken cancellationToken = default)
         {
             ThrowIfDisposed();
 
