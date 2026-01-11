@@ -75,10 +75,11 @@ public class DirectoryObjectEdgeCaseTests(ITestOutputHelper output, TestDirector
     public async Task CopyAsync_WithCancellation_CleansUpPartialCopy()
     {
         // Arrange
+        var sourceDir = TestDirectory.CreateSubdirectory("cancel_source");
         // Create multiple large files to ensure operation takes time
         for (int i = 0; i < 5; i++)
         {
-            await TestDirectory.CreateTestFileAsync(ResourceType.Video, cancellationToken: TestContext.Current.CancellationToken);
+            await sourceDir.CreateTestFileAsync(ResourceType.Video, cancellationToken: TestContext.Current.CancellationToken);
         }
 
         var destParent = TestDirectory.CreateSubdirectory("cancel_dest");
@@ -97,7 +98,7 @@ public class DirectoryObjectEdgeCaseTests(ITestOutputHelper output, TestDirector
         });
 
         // Act
-        var copyTask = TestDirectory.CopyAsync(destParent.FullPath, progress, overwrite: false, cancellationToken: cts.Token);
+        var copyTask = sourceDir.CopyAsync(destParent.FullPath, progress, overwrite: false, cancellationToken: cts.Token);
 
         // Wait for copy to actually start (with timeout)
         var started = await Task.WhenAny(copyStarted.Task, Task.Delay(2000, TestContext.Current.CancellationToken)) == copyStarted.Task;

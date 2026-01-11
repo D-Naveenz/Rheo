@@ -401,10 +401,10 @@ public class DirectoryObjectTests(ITestOutputHelper output, TestDirectoryFixture
     [InlineData("   ")]
     [InlineData("invalid<>name")]
     [InlineData("invalid|name")]
-    public void Rename_WithInvalidName_ThrowsArgumentException(string invalidName)
+    public void Rename_WithInvalidName_ThrowsArgumentException(string? invalidName)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => TestDirectory.Rename(invalidName));
+        Assert.Throws<ArgumentException>(() => TestDirectory.Rename(invalidName!));
     }
 
     [Fact]

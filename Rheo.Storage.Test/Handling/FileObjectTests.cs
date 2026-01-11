@@ -272,10 +272,10 @@ public class FileObjectTests(ITestOutputHelper output, TestDirectoryFixture fixt
     #region Rename Tests
 
     [Fact]
-    public async Task Rename_WithValidName_RenamesFile()
+    public void Rename_WithValidName_RenamesFile()
     {
         // Arrange
-        var sourceFile = await TestDirectory.CreateTestFileAsync(ResourceType.Text, cancellationToken: TestContext.Current.CancellationToken);
+        var sourceFile = TestDirectory.CreateTestFile(ResourceType.Text);
         var originalPath = sourceFile.FullPath;
         var newName = "renamed.txt";
 
@@ -294,13 +294,13 @@ public class FileObjectTests(ITestOutputHelper output, TestDirectoryFixture fixt
     [InlineData("   ")]
     [InlineData("invalid<>name.txt")]
     [InlineData("invalid|name.txt")]
-    public async Task Rename_WithInvalidName_ThrowsArgumentException(string invalidName)
+    public async Task Rename_WithInvalidName_ThrowsArgumentException(string? invalidName)
     {
         // Arrange
         var sourceFile = await TestDirectory.CreateTestFileAsync(ResourceType.Text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => sourceFile.Rename(invalidName));
+        Assert.Throws<ArgumentException>(() => sourceFile.Rename(invalidName!));
     }
 
     [Fact]

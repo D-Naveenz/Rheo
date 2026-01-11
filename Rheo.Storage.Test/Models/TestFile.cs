@@ -33,17 +33,20 @@
         /// reporting is not required.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the write operation.</param>
         /// <returns>A task that represents the asynchronous write operation.</returns>
-        public async Task WriteAsync(
-            byte[] content,
-            bool overwrite = false, 
-            IProgress<StorageProgress>? progress = null,
-            CancellationToken cancellationToken = default
-            )
+        public async Task WriteAsync(byte[] content, bool overwrite = false, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(content);
 
             using var memoryStream = new MemoryStream(content);
-            await WriteAsync(memoryStream, progress, overwrite, cancellationToken);
+            await WriteAsync(memoryStream, overwrite, cancellationToken);
+        }
+
+        public void Write(byte[] content, bool overwrite = false)
+        {
+            ArgumentNullException.ThrowIfNull(content);
+
+            using var memoryStream = new MemoryStream(content);
+            Write(memoryStream, overwrite);
         }
     }
 }
