@@ -12,7 +12,7 @@ namespace Rheo.Storage.Test.Analysing
         public void AnalyzeFile_WithNonExistentFile_ReturnsEmptyList()
         {
             // Arrange
-            var nonExistentPath = Path.Combine(TestDir.FullPath, "nonexistent.bin");
+            var nonExistentPath = Path.Combine(TestDirectory.FullPath, "nonexistent.bin");
 
             // Act
             var result = FileAnalyzer.AnalyzeFile(nonExistentPath);
@@ -25,7 +25,7 @@ namespace Rheo.Storage.Test.Analysing
         public void AnalyzeFile_WithEmptyFile_ReturnsEmptyList()
         {
             // Arrange
-            var emptyFilePath = Path.Combine(TestDir.FullPath, "empty.bin");
+            var emptyFilePath = Path.Combine(TestDirectory.FullPath, "empty.bin");
             File.WriteAllBytes(emptyFilePath, []);
 
             // Act
@@ -39,7 +39,7 @@ namespace Rheo.Storage.Test.Analysing
         public async Task AnalyzeFile_WithTextFile_ReturnsResults()
         {
             // Arrange
-            var testFile = await TestDir.CreateTestFileAsync(
+            var testFile = await TestDirectory.CreateTestFileAsync(
                 ResourceType.Text, 
                 cancellationToken: TestContext.Current.CancellationToken
                 );
@@ -60,7 +60,7 @@ namespace Rheo.Storage.Test.Analysing
         public async Task AnalyzeFile_WithPngImage_ReturnsResultsAsync()
         {
             // Arrange
-            var testFile = await TestDir.CreateTestFileAsync(
+            var testFile = await TestDirectory.CreateTestFileAsync(
                 ResourceType.Image,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
@@ -83,7 +83,7 @@ namespace Rheo.Storage.Test.Analysing
         public async Task AnalyzeFile_WithDocument_ReturnsResultsAsync()
         {
             // Arrange
-            var testFile = await TestDir.CreateTestFileAsync(
+            var testFile = await TestDirectory.CreateTestFileAsync(
                 ResourceType.Document,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
@@ -103,7 +103,7 @@ namespace Rheo.Storage.Test.Analysing
         public async Task AnalyzeFile_WithVideo_ReturnsResultsAsync()
         {
             // Arrange
-            var testFile = await TestDir.CreateTestFileAsync(
+            var testFile = await TestDirectory.CreateTestFileAsync(
                 ResourceType.Video,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
@@ -123,7 +123,7 @@ namespace Rheo.Storage.Test.Analysing
         public async Task AnalyzeFile_ResultsAreOrderedByPointsAsync()
         {
             // Arrange
-            var testFile = await TestDir.CreateTestFileAsync(
+            var testFile = await TestDirectory.CreateTestFileAsync(
                 ResourceType.Image,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
@@ -147,7 +147,7 @@ namespace Rheo.Storage.Test.Analysing
         public async Task AnalyzeFile_ConfidencesSumTo100PercentAsync()
         {
             // Arrange
-            var testFile = await TestDir.CreateTestFileAsync(
+            var testFile = await TestDirectory.CreateTestFileAsync(
                 ResourceType.Image,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
@@ -169,7 +169,7 @@ namespace Rheo.Storage.Test.Analysing
         public async Task AnalyzeFile_WithCheckStringsFalse_StillReturnsResultsAsync()
         {
             // Arrange
-            var testFile = await TestDir.CreateTestFileAsync(
+            var testFile = await TestDirectory.CreateTestFileAsync(
                 ResourceType.Image,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
@@ -190,7 +190,7 @@ namespace Rheo.Storage.Test.Analysing
         public void AnalyzeFile_WithKnownSignature_DetectsCorrectly()
         {
             // Arrange: Create a file with known ZIP signature (PK header)
-            var zipPath = Path.Combine(TestDir.FullPath, "test.zip");
+            var zipPath = Path.Combine(TestDirectory.FullPath, "test.zip");
             byte[] zipSignature = [0x50, 0x4B, 0x03, 0x04]; // ZIP/JAR/DOCX signature
             File.WriteAllBytes(zipPath, zipSignature);
 
@@ -216,7 +216,7 @@ namespace Rheo.Storage.Test.Analysing
         public void AnalyzeFile_WithCustomBinaryPattern_DetectsOrReturnsEmpty()
         {
             // Arrange: Create file with custom binary pattern
-            var customPath = Path.Combine(TestDir.FullPath, "custom.bin");
+            var customPath = Path.Combine(TestDirectory.FullPath, "custom.bin");
             byte[] customData = [0x00, 0xFF, 0x7A, 0x3C, 0x5D, 0xA1, 0x42, 0x99];
             File.WriteAllBytes(customPath, customData);
 
@@ -238,7 +238,7 @@ namespace Rheo.Storage.Test.Analysing
         public async Task AnalyzeFile_WithVariousResourceTypes_ReturnsValidResultsAsync(ResourceType resourceType)
         {
             // Arrange
-            var testFile = await TestDir.CreateTestFileAsync(
+            var testFile = await TestDirectory.CreateTestFileAsync(
                 resourceType,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
@@ -265,7 +265,7 @@ namespace Rheo.Storage.Test.Analysing
         public async Task AnalyzeFile_TopResultHasHighestConfidenceAsync()
         {
             // Arrange
-            var testFile = await TestDir.CreateTestFileAsync(
+            var testFile = await TestDirectory.CreateTestFileAsync(
                 ResourceType.Image,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
@@ -289,11 +289,11 @@ namespace Rheo.Storage.Test.Analysing
         public void AnalyzeFile_WithLargeFile_HandlesGracefully()
         {
             // Arrange: Create a larger file (simulating real-world scenario)
-            var largePath = Path.Combine(TestDir.FullPath, "large.bin");
+            var largePath = Path.Combine(TestDirectory.FullPath, "large.bin");
             byte[] largeData = new byte[10 * 1024]; // 10KB
 
             // Add PNG data
-            var (data, _) = TestFileProvider.GetImageFile(TestDir.FullPath);
+            var (data, _) = TestFileProvider.GetImageFile(TestDirectory.FullPath);
             Array.Copy(data, 0, largeData, 0, Math.Min(data.Length, largeData.Length));
             
             File.WriteAllBytes(largePath, largeData);

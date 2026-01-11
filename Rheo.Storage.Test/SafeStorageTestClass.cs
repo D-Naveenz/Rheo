@@ -19,10 +19,10 @@ namespace Rheo.Storage.Test
 
             // Create a safe directory name by removing invalid characters
             var safeTestName = TestName != null ? string.Concat(TestName.Split(Path.GetInvalidFileNameChars())) : null;
-            TestDir = _fixture.TestDir.CreateSubdirectory(safeTestName);
+            TestDirectory = _fixture.TestDir.CreateSubdirectory(safeTestName);
 
             // Log the test-specific directory if it differs from the base directory
-            var dirName = TestDir.Name;
+            var dirName = TestDirectory.Name;
             if (dirName != TestName)
             {
                 Output.WriteLine("Test-specific directory: " + dirName);
@@ -33,8 +33,8 @@ namespace Rheo.Storage.Test
 
         public string? TestName { get; }
 
-        public TestDirectory BaseTestDirectory => _fixture.TestDir;
+        public TestDirectory TestDirectoryParent => _fixture.TestDir;
 
-        public TestDirectory TestDir { get; }
+        public TestDirectory TestDirectory { get; }
     }
 }

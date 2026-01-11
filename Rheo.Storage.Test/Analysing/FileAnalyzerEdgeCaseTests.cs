@@ -6,20 +6,13 @@ namespace Rheo.Storage.Test.Analysing
 {
     [Trait(TestTraits.Feature, "FileAnalyzer")]
     [Trait(TestTraits.Category, "Edge Case Tests")]
-    public class FileAnalyzerEdgeCaseTests : IDisposable
+    public class FileAnalyzerEdgeCaseTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
     {
-        private readonly TestDirectory _testDir;
-
-        public FileAnalyzerEdgeCaseTests()
-        {
-            _testDir = TestDirectory.Create();
-        }
-
         [Fact]
         public void AnalyzeFile_WithOnlyHeaderPattern_NoStrings_DetectsCorrectly()
         {
             // Arrange: PDF signature
-            var pdfPath = Path.Combine(_testDir.FullPath, "test.pdf");
+            var pdfPath = Path.Combine(TestDirectory.FullPath, "test.pdf");
             byte[] pdfHeader = [0x25, 0x50, 0x44, 0x46, 0x2D]; // "%PDF-"
             File.WriteAllBytes(pdfPath, pdfHeader);
 
@@ -35,7 +28,7 @@ namespace Rheo.Storage.Test.Analysing
         public async Task AnalyzeFile_WithMultipleMatchingDefinitions_RanksCorrectlyAsync()
         {
             // Arrange: Create file that might match multiple definitions
-            var testFile = await _testDir.CreateTestFileAsync(
+            var testFile = await TestDirectory.CreateTestFileAsync(
                 ResourceType.Document,
                 cancellationToken: TestContext.Current.CancellationToken
                 );
@@ -62,7 +55,7 @@ namespace Rheo.Storage.Test.Analysing
         public void AnalyzeFile_WithPatternAtNonZeroPosition_DetectsCorrectly()
         {
             // Arrange: Create file with pattern not at position 0
-            var testPath = Path.Combine(_testDir.FullPath, "offset.bin");
+            var testPath = Path.Combine(TestDirectory.FullPath, "offset.bin");
             byte[] data = new byte[100];
             
             // Add some padding
@@ -87,7 +80,7 @@ namespace Rheo.Storage.Test.Analysing
         public void AnalyzeFile_WithVeryShortFile_HandlesGracefully()
         {
             // Arrange
-            var shortPath = Path.Combine(_testDir.FullPath, "short.bin");
+            var shortPath = Path.Combine(TestDirectory.FullPath, "short.bin");
             File.WriteAllBytes(shortPath, [0x42]); // Single byte
 
             // Act
@@ -101,7 +94,7 @@ namespace Rheo.Storage.Test.Analysing
         public void AnalyzeFile_CatchAllDefinitions_AreNotIncluded()
         {
             // Arrange: File with no recognizable pattern
-            var unknownPath = Path.Combine(_testDir.FullPath, "unknown.bin");
+            var unknownPath = Path.Combine(TestDirectory.FullPath, "unknown.bin");
             byte[] randomData = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
             File.WriteAllBytes(unknownPath, randomData);
 
@@ -113,12 +106,6 @@ namespace Rheo.Storage.Test.Analysing
             // This validates your decision to remove catch-all logic
             Assert.True(result.Definitions.Count == 0 || result.Definitions.All(r => r.Value > 0),
                 "Results should either be empty or have positive points (no catch-all guesses)");
-        }
-
-        public void Dispose()
-        {
-            _testDir?.Dispose();
-            GC.SuppressFinalize(this);
         }
     }
 }
