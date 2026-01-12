@@ -5,16 +5,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <AssemblyTitle>Rheo storage-handling library for C#</AssemblyTitle>
+    <Title>$(AssemblyTitle)</Title>
+    <Description>A modern .NET library for file and directory operations with rich metadata, content-based file analysis, and asynchronous I/O operations.</Description>
     <Authors>Naveen Dharmathunga</Authors>
+    <Version>0.6.18-beta.2</Version>
+    <Copyright>Copyright (c) 2025 Naveen Dharmathunga, All rights reserved.</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <RepositoryUrl>https://github.com/D-Naveenz/Rheo</RepositoryUrl>
-    <Copyright>Copyright (c) 2025 Naveen Dharmathunga, All rights reserved.</Copyright>
-    <Description>A modern .NET library for file and directory operations with rich metadata, content-based file analysis, and asynchronous I/O operations.</Description>
-    <Version>0.6.18-beta.2</Version>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <PackageTags>definition; extension; types; asynchronous; mime; file-handling; directory-management; magic-numbers; file-analysis; rheo;</PackageTags>
-    <DocumentationFile></DocumentationFile>
+    <RepositoryUrl>https://github.com/D-Naveenz/rheo-storage</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/D-Naveenz/rheo-storage/wiki</PackageProjectUrl>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -26,13 +28,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Notes\**" />
+    <EmbeddedResource Remove="Notes\**" />
+    <None Remove="Notes\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="MessagePack" Version="3.1.4" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Assets\" />
-    <Folder Include="Notes\" />
   </ItemGroup>
 
   <ItemGroup>

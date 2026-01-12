@@ -11,3 +11,7 @@ indent_size = 2
 # Yml files
 [*.yml]
 indent_size = 2
+
+# CSProj files
+[*.csproj]
+indent_size = 2
