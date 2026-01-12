@@ -1,6 +1,6 @@
 ﻿using MessagePack;
 
-namespace Rheo.Storage.FileDefinition.Models
+namespace Rheo.Storage.Analyzing.Models
 {
     /// <summary>
     /// Represents a signature that contains collections of patterns and string data in byte array format.
@@ -25,6 +25,7 @@ namespace Rheo.Storage.FileDefinition.Models
         [Key(1)]
         public List<byte[]> Strings { get; set; } = [];
 
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"Signature: {Patterns.Count} patterns, {Strings.Count} strings";

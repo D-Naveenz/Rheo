@@ -21,3 +21,5 @@ internal static class StoragePaths
     /// </summary>
     internal static string DefaultRootPath => AppContext.BaseDirectory ?? DefaultLocalPath;
 }
+
+// Comment Icons: ⚠️✅❌💀

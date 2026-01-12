@@ -1,6 +1,6 @@
 ﻿using Rheo.Storage.DefinitionsBuilder.ETL.RIFF;
 
-namespace Rheo.Storage.DefinitionsBuilder.Analyse
+namespace Rheo.Storage.DefinitionsBuilder.Analyze
 {
     public static class TridFileAnalyzer
     {

@@ -1,4 +1,5 @@
-﻿using Rheo.Storage.Contracts;
+﻿using Rheo.Storage.COM;
+using Rheo.Storage.Contracts;
 using System.Drawing;
 
 namespace Rheo.Storage.Information
@@ -54,7 +55,7 @@ namespace Rheo.Storage.Information
             {
                 try
                 {
-                    var infoStruct = GetPlatformStorageInfo();
+                    var infoStruct = Platform.GetStorageInformation(absolutePath);
                     _storageInfoTaskAwaiter.SetResult(infoStruct);
                 }
                 catch (Exception ex)
@@ -102,7 +103,7 @@ namespace Rheo.Storage.Information
 
         #region Properties: Size
         /// <inheritdoc/>
-        public abstract ulong Size { get; }
+        public abstract long Size { get; }
 
         /// <inheritdoc/>
         public string FormattedSize => GetSizeString();
@@ -138,13 +139,13 @@ namespace Rheo.Storage.Information
         public Icon? Icon => TryGetWindowsStorageInfo(out var winfo) ? winfo.Icon : null;
 
         /// <inheritdoc/>
-        public uint? OwnerId => TryGetUnixStorageInfo(out var uinfo) ? uinfo.OwnerId : null;
+        public int? OwnerId => TryGetUnixStorageInfo(out var uinfo) ? (int)uinfo.OwnerId : null;
 
         /// <inheritdoc/>
-        public uint? GroupId => TryGetUnixStorageInfo(out var uinfo) ? uinfo.GroupId : null;
+        public int? GroupId => TryGetUnixStorageInfo(out var uinfo) ? (int)uinfo.GroupId : null;
 
         /// <inheritdoc/>
-        public uint? Mode => TryGetUnixStorageInfo(out var uinfo) ? uinfo.Mode : null;
+        public int? Mode => TryGetUnixStorageInfo(out var uinfo) ? (int)uinfo.Mode : null;
 
         #endregion
 
@@ -175,27 +176,21 @@ namespace Rheo.Storage.Information
         /// Attempts to retrieve storage information specific to Windows systems.
         /// </summary>
         /// <remarks>This method does not throw exceptions. If the underlying storage information is not
-        /// compatible with Windows or an error occurs, the method returns false and <paramref name="winfo"/> is set to
+        /// compatible with Windows or an error occurs, the method returns false and <paramref name="info"/> is set to
         /// its default value.</remarks>
-        /// <param name="windowsInfo">When this method returns, contains a <see cref="WindowsStorageInfo"/> object with Windows-specific storage
+        /// <param name="info">When this method returns, contains a <see cref="WindowsStorageInfo"/> object with Windows-specific storage
         /// details if available; otherwise, the default value.</param>
         /// <returns>true if Windows storage information was successfully retrieved; otherwise, false.</returns>
-        protected bool TryGetWindowsStorageInfo(out WindowsStorageInfo windowsInfo)
+        protected bool TryGetWindowsStorageInfo(out WindowsStorageInfo info)
         {
-            try
+            info = default;
+
+            if (_storageInfoLazy.Value is WindowsStorageInfo winInfo)
             {
-                if (OperatingSystem.IsWindows())
-                {
-                    windowsInfo = InformationProvider.GetWindowsFileInfo(_absPath);
-                    return true;
-                }
-            }
-            catch
-            {
-                // Handle exception
+                info = winInfo;
+                return true;
             }
 
-            windowsInfo = default;
             return false;
         }
 
@@ -204,59 +199,22 @@ namespace Rheo.Storage.Information
         /// </summary>
         /// <remarks>This method does not throw exceptions. If the underlying storage information is not
         /// compatible with Unix systems or an error occurs during retrieval, the method returns <see langword="false"/>
-        /// and <paramref name="uinfo"/> is set to its default value.</remarks>
-        /// <param name="uinfo">When this method returns, contains a <see cref="UnixStorageInfo"/> structure with the Unix storage
+        /// and <paramref name="info"/> is set to its default value.</remarks>
+        /// <param name="info">When this method returns, contains a <see cref="UnixStorageInfo"/> structure with the Unix storage
         /// information if available; otherwise, the default value.</param>
         /// <returns><see langword="true"/> if Unix storage information is available and was retrieved successfully; otherwise,
         /// <see langword="false"/>.</returns>
-        protected bool TryGetUnixStorageInfo(out UnixStorageInfo uinfo)
+        protected bool TryGetUnixStorageInfo(out UnixStorageInfo info)
         {
-            uinfo = default;
-            try
-            {
-                var storageInfo = _storageInfoLazy.Value;
-                if (storageInfo is UnixStorageInfo unixInfo)
-                {
-                    uinfo = unixInfo;
-                    return true;
-                }
-                return false;
-            }
-            catch
-            {
-                return false;
-            }
-        }
+            info = default;
 
-        private IStorageInfoStruct GetPlatformStorageInfo()
-        {
-            try
+            if (_storageInfoLazy.Value is UnixStorageInfo unixInfo)
             {
-                IStorageInfoStruct infoStruct;
-
-                if (OperatingSystem.IsWindows())
-                {
-                    infoStruct = InformationProvider.GetWindowsFileInfo(_absPath);
-                }
-                else if (OperatingSystem.IsLinux())
-                {
-                    infoStruct = InformationProvider.GetLinuxFileInfo(_absPath);
-                }
-                else if (OperatingSystem.IsMacOS())
-                {
-                    infoStruct = InformationProvider.GetMacFileInfo(_absPath);
-                }
-                else
-                {
-                    throw new PlatformNotSupportedException("The current operating system is not supported.");
-                }
-
-                return infoStruct;
+                info = unixInfo;
+                return true;
             }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Failed to retrieve platform-specific storage information.", ex);
-            }
+
+            return false;
         }
 
         private string? GetSymbolicLinkTarget()

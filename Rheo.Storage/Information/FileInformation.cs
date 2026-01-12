@@ -1,5 +1,6 @@
-﻿using Rheo.Storage.FileDefinition;
-using Rheo.Storage.FileDefinition.Models.Result;
+﻿using Rheo.Storage.Analyzing;
+using Rheo.Storage.Analyzing.Models.Result;
+using Rheo.Storage.Contracts;
 
 namespace Rheo.Storage.Information
 {
@@ -12,7 +13,7 @@ namespace Rheo.Storage.Information
     /// metadata, which can provide more accurate identification than relying on file name or extension alone. This
     /// class is typically used when you need to determine the true nature of a file, regardless of its name or
     /// extension.</remarks>
-    public class FileInformation : StorageInformation, IEquatable<FileInformation>
+    public sealed class FileInformation : StorageInformation, IEquatable<FileInformation>
     {
         private readonly TaskCompletionSource<AnalysisResult> _analysisTaskAwaiter;
         private readonly Lazy<AnalysisResult> _identificationReportLazy;
@@ -114,7 +115,7 @@ namespace Rheo.Storage.Information
 
         #region Properties: Size
         /// <inheritdoc/>
-        public override ulong Size => _storageInfoLazy.Value.Size;
+        public override long Size => (long)_storageInfoLazy.Value.Size;
 
         /// <inheritdoc/>
         public bool Equals(FileInformation? other)

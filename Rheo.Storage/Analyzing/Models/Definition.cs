@@ -1,13 +1,10 @@
 ﻿using MessagePack;
 
-namespace Rheo.Storage.FileDefinition.Models
+namespace Rheo.Storage.Analyzing.Models
 {
     /// <summary>
-    /// Represents a type definition that includes metadata such as file type, extension, MIME type, and additional
-    /// context information.
+    /// Represents a file type definition, including associated extensions, MIME type, and related metadata.
     /// </summary>
-    /// <remarks>This class is used to encapsulate metadata and properties associated with a specific type
-    /// definition.  It includes details such as the file type, file extension, MIME type, and priority level, as well
     [MessagePackObject]
     public partial class Definition
     {
@@ -42,6 +39,7 @@ namespace Rheo.Storage.FileDefinition.Models
         [Key(5)]
         public int PriorityLevel { get; set; } = 0;
 
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"{FileType} ({MimeType}) [{string.Join(", ", Extensions)}]";

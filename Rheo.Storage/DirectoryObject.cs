@@ -1,52 +1,65 @@
-﻿using Rheo.Storage.Information;
-using System.Diagnostics;
+﻿using Rheo.Storage.Handling;
+using Rheo.Storage.Information;
+using System.Collections.Concurrent;
 
 namespace Rheo.Storage
 {
     /// <summary>
-    /// Represents a directory in the file system and provides methods for monitoring, accessing, and manipulating its
-    /// contents asynchronously.
+    /// Represents a directory in the file system and provides methods for accessing, monitoring, and manipulating its
+    /// contents.
     /// </summary>
-    /// <remarks>A DirectoryObject encapsulates a directory and automatically monitors it and its
-    /// subdirectories for changes, such as file or directory creation, deletion, and attribute modifications. It
-    /// provides methods to retrieve files and subdirectories, as well as to copy, move, rename, or delete the directory
-    /// and its contents. Changes detected in the directory may affect related properties and events. This class is
-    /// intended for use in scenarios where directory monitoring and advanced file system operations are
-    /// required.</remarks>
-    public class DirectoryObject : StorageObject
+    /// <remarks>A DirectoryObject encapsulates a directory path and enables operations such as retrieving
+    /// files and subdirectories, accessing specific files or directories by relative path, and performing copy, move,
+    /// rename, and delete actions. Upon instantiation, the DirectoryObject automatically monitors the represented
+    /// directory and its subdirectories for changes, such as file or directory creation, deletion, and attribute
+    /// modifications. This monitoring may affect properties that reflect the current state of the directory. The class
+    /// provides both synchronous and asynchronous methods for common directory operations, and ensures that resource
+    /// management and error handling are consistent with .NET best practices.</remarks>
+    public class DirectoryObject : StorageObject<DirectoryObject, DirectoryInformation>
     {
+        /// <summary>
+        /// The default interval, in milliseconds, used to debounce file system watcher events when monitoring directory changes.
+        /// </summary>
+        public const int DefaultWatchInterval = 500; // milliseconds
+
+        private readonly ConcurrentBag<string> _changedFiles = [];
+        private readonly Timer? _debounceTimer;
         private readonly FileSystemWatcher _watcher;
+        
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DirectoryObject"/> class to monitor the specified directory for changes,
+        /// using a default watch interval of 500 milliseconds.
+        /// </summary>
+        /// <param name="path">The full path of the directory to monitor. Cannot be null or empty.</param>
+        public DirectoryObject(string path) : this(path, DefaultWatchInterval)
+        {
+        }
 
         /// <summary>
-        /// Initializes a new instance of the DirectoryObject class for the specified directory path and begins
-        /// monitoring the directory for changes.
+        /// Initializes a new instance of the DirectoryObject class to monitor the specified directory for changes.
         /// </summary>
-        /// <remarks>The created DirectoryObject instance automatically monitors the specified directory
-        /// and its subdirectories for changes, including file and directory creation, deletion, and attribute
-        /// modifications. Changes detected by the watcher may affect properties such as file counts or directory size.
-        /// The monitoring begins immediately upon construction.</remarks>
-        /// <param name="path">The full path to the directory to be represented and monitored. Cannot be null or empty.</param>
-        /// <exception cref="IOException">Thrown if the directory watcher cannot be initialized for the specified path, such as if the path is invalid
-        /// or inaccessible.</exception>
-        public DirectoryObject(string path) : base(path)
+        /// <remarks>The directory is monitored for file name, size, and last write time changes,
+        /// including changes in subdirectories. The watch interval is used to debounce rapid sequences of file system
+        /// events, reducing redundant processing.</remarks>
+        /// <param name="path">The full path of the directory to monitor. Cannot be null or empty.</param>
+        /// <param name="watchInterval">The interval, in milliseconds, to wait after the last detected change before processing events. Must be
+        /// greater than zero.</param>
+        /// <exception cref="IOException">Thrown if the directory watcher cannot be initialized for the specified path.</exception>
+        public DirectoryObject(string path, int watchInterval) : base(path)
         {
             path = FullPath; // Ensure base class has processed the path
+
+            // Ensure the Directory exists
+            Directory.CreateDirectory(path);
 
             try
             {
                 _watcher = new FileSystemWatcher(path)
                 {
-                    NotifyFilter = NotifyFilters.FileName
-                                 | NotifyFilters.DirectoryName 
-                                 | NotifyFilters.Attributes 
-                                 | NotifyFilters.Size 
-                                 | NotifyFilters.LastWrite 
-                                 | NotifyFilters.LastAccess 
-                                 | NotifyFilters.CreationTime 
-                                 | NotifyFilters.Security,
-
                     IncludeSubdirectories = true,
-                    EnableRaisingEvents = true
+                    NotifyFilter = NotifyFilters.FileName
+                                 | NotifyFilters.Size 
+                                 | NotifyFilters.LastWrite
                 };
 
                 // Event handlers
@@ -56,8 +69,10 @@ namespace Rheo.Storage
                 _watcher.Created += Watcher_Changed;
                 _watcher.Deleted += Watcher_Changed;
 
-                // Load the information
-                _informationInternal = CreateNewInformationInstance();
+                _watcher.EnableRaisingEvents = true;
+
+                // Debounce timer: waits <watchInterval> milliseconds after last event before processing
+                _debounceTimer = new Timer(OnDebounceTimerTick, _changedFiles, Timeout.Infinite, watchInterval);
             }
             catch (Exception ex)
             {
@@ -65,13 +80,17 @@ namespace Rheo.Storage
             }
         }
 
-        /// <summary>
-        /// Gets metadata information about the storage object, such as size, attributes, and timestamps.
-        /// </summary>
-        public DirectoryInformation Information => (DirectoryInformation)_informationInternal!;
-
         /// <inheritdoc/>
-        public override string Name => Path.GetDirectoryName(FullPath)!;
+        public override string Name
+        {
+            get
+            {
+                lock(StateLock)
+                {
+                    return Path.GetFileName(FullPath)!;
+                }
+            }
+        }
 
         /// <summary>
         /// Retrieves the file names from the directory represented by this instance, based on the specified search
@@ -180,204 +199,131 @@ namespace Rheo.Storage
         }
 
         /// <inheritdoc/>
-        public override async Task CopyAsync(
-            string destination,
-            bool overwrite = false,
-            int maxConcurrent = 4,
-            IProgress<StorageProgress>? progress = null,
-            CancellationToken cancellationToken = default)
+        public override DirectoryObject Copy(string destination, bool overwrite)
         {
-            ProcessDestinationPath(ref destination, overwrite);
-
-            var files = Directory.GetFiles(FullPath, "*", SearchOption.AllDirectories);
-            var totalBytes = files.Sum(file => new FileInfo(file).Length);
-            long bytesTransferred = 0;
-
-            var bufferSize = (int)GetBufferSize(Information.Size);
-            var stopwatch = Stopwatch.StartNew();
-
-            // Create all directories first (including empty ones)
-            var directories = Directory.GetDirectories(FullPath, "*", SearchOption.AllDirectories);
-            foreach (var dir in directories)
-            {
-                var relativeDir = Path.GetRelativePath(FullPath, dir);
-                var targetDir = Path.Combine(destination, relativeDir);
-                if (!Directory.Exists(targetDir))
-                {
-                    Directory.CreateDirectory(targetDir);
-                }
-            }
-
-            var semaphore = new SemaphoreSlim(maxConcurrent > 0 ? maxConcurrent : 1);
-            var exceptions = new List<Exception>();
-
-            var copyTasks = files.Select(async file =>
-            {
-                await semaphore.WaitAsync(cancellationToken);
-                try
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var relativePath = Path.GetRelativePath(FullPath, file);
-                    var targetFilePath = Path.Combine(destination, relativePath);
-
-                    var targetDirectory = Path.GetDirectoryName(targetFilePath);
-                    if (!Directory.Exists(targetDirectory))
-                    {
-                        Directory.CreateDirectory(targetDirectory!);
-                    }
-
-                    using var sourceStream = new FileStream(
-                        file,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.Read,
-                        bufferSize,
-                        true);
-
-                    using var destStream = new FileStream(
-                        targetFilePath,
-                        overwrite ? FileMode.Create : FileMode.CreateNew,
-                        FileAccess.Write,
-                        FileShare.None,
-                        bufferSize,
-                        true);
-
-                    var buffer = new byte[bufferSize];
-                    int bytesRead;
-                    while ((bytesRead = await sourceStream.ReadAsync(buffer, cancellationToken)) > 0)
-                    {
-                        await destStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
-                        Interlocked.Add(ref bytesTransferred, bytesRead);
-
-                        if (progress != null)
-                        {
-                            double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
-                            double bytesPerSecond = elapsedSeconds > 0 ? bytesTransferred / elapsedSeconds : 0;
-                            progress.Report(new StorageProgress
-                            {
-                                TotalBytes = totalBytes,
-                                BytesTransferred = bytesTransferred,
-                                BytesPerSecond = bytesPerSecond
-                            });
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    lock (exceptions)
-                    {
-                        exceptions.Add(ex);
-                    }
-                }
-                finally
-                {
-                    semaphore.Release();
-                }
-            }).ToList();
-
-            await Task.WhenAll(copyTasks);
-
-            if (exceptions.Count > 0)
-            {
-                throw new AggregateException("One or more files failed to copy.", exceptions);
-            }
-
-            // Raise the Event
-            OnStorageChanged(new(destination, StorageChangeType.Created));
+            ThrowIfDisposed();
+            return DirectoryHandling.Copy(this, destination, overwrite);
         }
 
         /// <inheritdoc/>
-        public override Task DeleteAsync()
+        public override DirectoryObject Copy(string destination, IProgress<StorageProgress>? progress, bool overwrite = false)
         {
-            var task = Task.Run(() => Directory.Delete(FullPath, true));
-
-            // Raise the Event
-            OnStorageChanged(new(FullPath, StorageChangeType.Deleted));
-
-            return task;
+            ThrowIfDisposed();
+            return DirectoryHandling.Copy(this, destination, overwrite, progress);
         }
 
         /// <inheritdoc/>
-        public override async Task MoveAsync(
-            string destination,
-            bool overwrite = false,
-            int maxConcurrent = 4,
-            IProgress<StorageProgress>? progress = null,
-            CancellationToken cancellationToken = default)
+        public override Task<DirectoryObject> CopyAsync(string destination, bool overwrite, CancellationToken cancellationToken = default)
         {
-            ProcessDestinationPath(ref destination, overwrite);
-
-            // If source and destination are on the same volume, use Directory.Move for atomic move
-            if (AreOnSameVolume(FullPath, destination))
-            {
-                // If overwrite is true and destination exists, delete it first
-                if (overwrite && Directory.Exists(destination))
-                {
-                    Directory.Delete(destination, true);
-                }
-                await Task.Run(() => Directory.Move(FullPath, destination), cancellationToken);
-
-                // Report progress as complete
-                progress?.Report(new StorageProgress
-                {
-                    TotalBytes = 1,
-                    BytesTransferred = 1,
-                    BytesPerSecond = 0
-                });
-            }
-            else
-            {
-                // Otherwise, perform copy + delete (cross-volume)
-                await CopyAsync(destination, overwrite, maxConcurrent, progress, cancellationToken);
-                await DeleteAsync();
-            }
-
-            // Raise the Event
-            OnStorageChanged(new(destination, StorageChangeType.Relocated));
+            ThrowIfDisposed();
+            return DirectoryHandling.CopyAsync(this, destination, overwrite, null, cancellationToken);
         }
 
         /// <inheritdoc/>
-        public override async Task RenameAsync(string newName)
+        public override Task<DirectoryObject> CopyAsync(string destination, IProgress<StorageProgress>? progress, bool overwrite = false, CancellationToken cancellationToken = default)
         {
-            // Validate newName
-            if (string.IsNullOrWhiteSpace(newName))
-                throw new ArgumentException("New name must not be null or whitespace.", nameof(newName));
+            ThrowIfDisposed();
+            return DirectoryHandling.CopyAsync(this, destination, overwrite, progress, cancellationToken);
+        }
 
-            // Verify the name does not contain invalid characters
-            var invalidChars = Path.GetInvalidPathChars();
-            if (newName.IndexOfAny(invalidChars) >= 0)
-            {
-                throw new ArgumentException("The name contains invalid characters.", nameof(newName));
-            }
+        /// <inheritdoc/>
+        public override void Delete()
+        {
+            ThrowIfDisposed();
+            DirectoryHandling.Delete(this);
+        }
 
-            // Get parent directory and new full path
-            var parentDir = Path.GetDirectoryName(FullPath) ?? throw new InvalidOperationException("Cannot determine parent directory.");
-            var newFullPath = Path.Combine(parentDir, newName);
+        /// <inheritdoc/>
+        public override Task DeleteAsync(CancellationToken cancellationToken = default)
+        {
+            ThrowIfDisposed();
+            return DirectoryHandling.DeleteAsync(this, cancellationToken);
+        }
 
-            // Ensure the new path does not already exist
-            if (Directory.Exists(newFullPath))
-                throw new IOException($"A directory with the name '{newName}' already exists in '{parentDir}'.");
+        /// <inheritdoc/>
+        public override DirectoryObject Move(string destination, bool overwrite)
+        {
+            ThrowIfDisposed();
+            return DirectoryHandling.Move(this, destination, overwrite);
+        }
 
-            // Perform the rename (move)
-            await Task.Run(() => Directory.Move(FullPath, newFullPath));
+        /// <inheritdoc/>
+        public override DirectoryObject Move(string destination, IProgress<StorageProgress>? progress, bool overwrite = false)
+        {
+            ThrowIfDisposed();
+            return DirectoryHandling.Move(this, destination, overwrite, progress);
+        }
 
-            // Raise the Event
-            OnStorageChanged(new(newFullPath, StorageChangeType.Relocated));
+        /// <inheritdoc/>
+        public override Task<DirectoryObject> MoveAsync(string destination, bool overwrite, CancellationToken cancellationToken = default)
+        {
+            ThrowIfDisposed();
+            return DirectoryHandling.MoveAsync(this, destination, overwrite, null, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public override Task<DirectoryObject> MoveAsync(string destination, IProgress<StorageProgress>? progress, bool overwrite = false, CancellationToken cancellationToken = default)
+        {
+            ThrowIfDisposed();
+            return DirectoryHandling.MoveAsync(this, destination, overwrite, progress, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public override void Rename(string newName)
+        {
+            ThrowIfDisposed();
+
+            // ✅ NO LOCK - FileHandling.Rename already locks
+            var newObject = DirectoryHandling.Rename(this, newName);
+            CopyFrom(newObject); // CopyFrom has its own lock
+            newObject.Dispose();
+        }
+
+        /// <inheritdoc/>
+        public override async Task RenameAsync(string newName, CancellationToken cancellationToken = default)
+        {
+            ThrowIfDisposed();
+
+            // ✅ NO LOCK - FileHandling.Rename already locks
+            var newObject = await DirectoryHandling.RenameAsync(this, newName, cancellationToken);
+            CopyFrom(newObject); // CopyFrom has its own lock
+            newObject.Dispose();
         }
 
         /// <inheritdoc/>
         public override void Dispose()
         {
-            // Dispose the FileSystemWatcher
-            _watcher.Dispose();
+            lock (StateLock)
+            {
+                // Check if already disposed
+                try { ThrowIfDisposed(); }
+                catch (ObjectDisposedException) { return; }
 
+                // Disable watcher events before disposing
+                if (_watcher != null)
+                {
+                    _watcher.EnableRaisingEvents = false;
+                    _watcher.Changed -= Watcher_Changed;
+                    _watcher.Created -= Watcher_Changed;
+                    _watcher.Deleted -= Watcher_Changed;
+                }
+
+                // Stop and dispose timer
+                _debounceTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+                _debounceTimer?.Dispose();
+                
+                // Dispose watcher
+                _watcher?.Dispose();
+            }
+
+            // Call base dispose (handles its own locking)
             base.Dispose();
+            
             GC.SuppressFinalize(this);
         }
 
         /// <inheritdoc/>
-        protected override DirectoryInformation CreateNewInformationInstance()
+        protected override DirectoryInformation CreateInformationInstance()
         {
             return new DirectoryInformation(FullPath);
         }
@@ -406,8 +352,23 @@ namespace Rheo.Storage
 
         private void Watcher_Changed(object sender, FileSystemEventArgs e)
         {
-            // Invoke the StorageChanged event to notify subscribers about the change
-            OnStorageChanged(new(FullPath, StorageChangeType.Modified));
+            // Add the changed file to the collection
+            _changedFiles.Add(e.FullPath);
+
+            // Reset the debounce timer
+            _debounceTimer?.Change(2000, Timeout.Infinite);
+        }
+
+        private void OnDebounceTimerTick(object? state)
+        {
+            var changedFiles = (ConcurrentBag<string>)state!;
+            if (!changedFiles.IsEmpty)
+            {
+                var newObject = new DirectoryObject(FullPath);
+                CopyFrom(newObject); // CopyFrom has its own lock
+                newObject.Dispose();
+                changedFiles.Clear();
+            }
         }
     }
 }

@@ -1,8 +1,8 @@
-﻿using Rheo.Storage.DefinitionsBuilder.ETL.RIFF;
+﻿using Rheo.Storage.Analyzing.Models;
+using Rheo.Storage.DefinitionsBuilder.ETL.RIFF;
 using Rheo.Storage.DefinitionsBuilder.ETL.Sluice;
 using Rheo.Storage.DefinitionsBuilder.ETL.Validation;
 using Rheo.Storage.DefinitionsBuilder.Settings;
-using Rheo.Storage.FileDefinition.Models;
 
 namespace Rheo.Storage.DefinitionsBuilder.ETL.Packaging
 {

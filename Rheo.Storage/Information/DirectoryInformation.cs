@@ -1,4 +1,5 @@
-﻿using System.Security;
+﻿using Rheo.Storage.Contracts;
+using System.Security;
 
 namespace Rheo.Storage.Information
 {
@@ -10,7 +11,7 @@ namespace Rheo.Storage.Information
     /// the number of files, number of subdirectories, and the total size of all files within the directory tree. If the
     /// application lacks sufficient permissions to access parts of the directory, some properties may return fallback
     /// values (such as -1 or 0) to indicate that the operation could not be completed.</remarks>
-    public class DirectoryInformation : StorageInformation, IEquatable<DirectoryInformation>
+    public sealed class DirectoryInformation : StorageInformation, IEquatable<DirectoryInformation>
     {
         private readonly DirectoryInfo _systemDirInfo;
 
@@ -79,7 +80,7 @@ namespace Rheo.Storage.Information
 
         #region Properties: Size
         /// <inheritdoc/>
-        public override ulong Size { get; }
+        public override long Size { get; }
 
         #endregion
 
@@ -125,16 +126,16 @@ namespace Rheo.Storage.Information
             return !(left == right);
         }
 
-        private static ulong CalculateDirectorySize(DirectoryInfo systemDirInfo)
+        private static long CalculateDirectorySize(DirectoryInfo systemDirInfo)
         {
             try
             {
-                ulong size = 0;
+                long size = 0;
                 // Add file sizes.
                 FileInfo[] files = systemDirInfo.GetFiles();
                 foreach (FileInfo file in files)
                 {
-                    size += (ulong)file.Length;
+                    size += file.Length;
                 }
                 // Add subdirectory sizes.
                 DirectoryInfo[] dirs = systemDirInfo.GetDirectories();

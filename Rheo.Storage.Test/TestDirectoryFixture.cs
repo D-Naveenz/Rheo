@@ -1,7 +1,7 @@
 ﻿using Rheo.Storage.Test.Models;
 using System.Diagnostics;
 
-namespace Rheo.Storage.Test.FileDefinitions
+namespace Rheo.Storage.Test
 {
     public class TestDirectoryFixture : IDisposable
     {
@@ -25,5 +25,11 @@ namespace Rheo.Storage.Test.FileDefinitions
             TestDir.Dispose();
             GC.SuppressFinalize(this);
         }
+    }
+
+    [CollectionDefinition("SharedTestDirectoryCollection")]
+    public class SharedTestDirectoryCollection : ICollectionFixture<TestDirectoryFixture>
+    {
+        // No code here, just the definition
     }
 }

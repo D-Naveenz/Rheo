@@ -1,24 +1,16 @@
 using Rheo.Storage.Information;
-using Rheo.Storage.Test.Models;
 
 namespace Rheo.Storage.Test.Information
 {
     [Trait(TestTraits.Feature, "DirectoryInformation")]
     [Trait(TestTraits.Category, "Edge Case Tests")]
-    public class DirectoryInformationEdgeCaseTests : IDisposable
+    public class DirectoryInformationEdgeCaseTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
     {
-        private readonly TestDirectory _testDir;
-
-        public DirectoryInformationEdgeCaseTests()
-        {
-            _testDir = TestDirectory.Create();
-        }
-
         [Fact]
         public void NoOfFiles_WithDeeplyNestedStructure_CountsAllFiles()
         {
             // Arrange: Create deeply nested directory structure
-            var currentPath = _testDir.FullPath;
+            var currentPath = TestDirectory.FullPath;
             for (int i = 0; i < 5; i++)
             {
                 currentPath = Path.Combine(currentPath, $"level{i}");
@@ -27,7 +19,7 @@ namespace Rheo.Storage.Test.Information
             }
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
             Assert.Equal(5, dirInfo.NoOfFiles);
@@ -37,7 +29,7 @@ namespace Rheo.Storage.Test.Information
         public void NoOfDirectories_WithDeeplyNestedStructure_CountsAllDirectories()
         {
             // Arrange: Create deeply nested directory structure
-            var currentPath = _testDir.FullPath;
+            var currentPath = TestDirectory.FullPath;
             for (int i = 0; i < 10; i++)
             {
                 currentPath = Path.Combine(currentPath, $"nested{i}");
@@ -45,7 +37,7 @@ namespace Rheo.Storage.Test.Information
             }
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
             Assert.Equal(10, dirInfo.NoOfDirectories);
@@ -55,13 +47,13 @@ namespace Rheo.Storage.Test.Information
         public void NoOfFiles_WithMixedContent_CountsOnlyFiles()
         {
             // Arrange
-            File.WriteAllText(Path.Combine(_testDir.FullPath, "file1.txt"), "content");
-            Directory.CreateDirectory(Path.Combine(_testDir.FullPath, "dir1"));
-            File.WriteAllText(Path.Combine(_testDir.FullPath, "file2.dat"), "data");
-            Directory.CreateDirectory(Path.Combine(_testDir.FullPath, "dir2"));
+            File.WriteAllText(Path.Combine(TestDirectory.FullPath, "file1.txt"), "content");
+            Directory.CreateDirectory(Path.Combine(TestDirectory.FullPath, "dir1"));
+            File.WriteAllText(Path.Combine(TestDirectory.FullPath, "file2.dat"), "data");
+            Directory.CreateDirectory(Path.Combine(TestDirectory.FullPath, "dir2"));
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
             Assert.Equal(2, dirInfo.NoOfFiles);
@@ -72,17 +64,17 @@ namespace Rheo.Storage.Test.Information
         public void Size_WithLargeNumberOfFiles_CalculatesCorrectly()
         {
             // Arrange: Create many small files
-            ulong expectedSize = 0;
+            long expectedSize = 0;
             for (int i = 0; i < 100; i++)
             {
-                var filePath = Path.Combine(_testDir.FullPath, $"file{i}.bin");
+                var filePath = Path.Combine(TestDirectory.FullPath, $"file{i}.bin");
                 var content = new byte[i + 1];
                 File.WriteAllBytes(filePath, content);
-                expectedSize += (ulong)(i + 1);
+                expectedSize += i + 1;
             }
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
             Assert.Equal(expectedSize, dirInfo.Size);
@@ -92,23 +84,23 @@ namespace Rheo.Storage.Test.Information
         public void Size_WithVeryLargeFile_HandlesCorrectly()
         {
             // Arrange: Create a large file (1MB)
-            var largePath = Path.Combine(_testDir.FullPath, "large.bin");
+            var largePath = Path.Combine(TestDirectory.FullPath, "large.bin");
             var largeData = new byte[1024 * 1024]; // 1MB
             File.WriteAllBytes(largePath, largeData);
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
-            Assert.Equal(1024UL * 1024, dirInfo.Size);
+            Assert.Equal(1024L * 1024, dirInfo.Size);
         }
 
         [Fact]
         public void Equals_WithCaseInsensitivePaths_HandlesCorrectly()
         {
             // Arrange
-            var lowerPath = _testDir.FullPath.ToLowerInvariant();
-            var upperPath = _testDir.FullPath.ToUpperInvariant();
+            var lowerPath = TestDirectory.FullPath.ToLowerInvariant();
+            var upperPath = TestDirectory.FullPath.ToUpperInvariant();
 
             // Act
             var dirInfo1 = new DirectoryInformation(lowerPath);
@@ -131,7 +123,7 @@ namespace Rheo.Storage.Test.Information
         public void GetHashCode_IsCaseInsensitive()
         {
             // Arrange
-            var dirPath = _testDir.FullPath;
+            var dirPath = TestDirectory.FullPath;
 
             // Act
             var dirInfo1 = new DirectoryInformation(dirPath);
@@ -146,12 +138,12 @@ namespace Rheo.Storage.Test.Information
         public void NoOfFiles_WithSpecialCharactersInNames_CountsCorrectly()
         {
             // Arrange: Create files with special characters
-            File.WriteAllText(Path.Combine(_testDir.FullPath, "file with spaces.txt"), "content");
-            File.WriteAllText(Path.Combine(_testDir.FullPath, "file-with-dashes.txt"), "content");
-            File.WriteAllText(Path.Combine(_testDir.FullPath, "file_with_underscores.txt"), "content");
+            File.WriteAllText(Path.Combine(TestDirectory.FullPath, "file with spaces.txt"), "content");
+            File.WriteAllText(Path.Combine(TestDirectory.FullPath, "file-with-dashes.txt"), "content");
+            File.WriteAllText(Path.Combine(TestDirectory.FullPath, "file_with_underscores.txt"), "content");
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
             Assert.Equal(3, dirInfo.NoOfFiles);
@@ -161,7 +153,7 @@ namespace Rheo.Storage.Test.Information
         public void NoOfFiles_WithHiddenFiles_CountsHiddenFiles()
         {
             // Arrange
-            var hiddenPath = Path.Combine(_testDir.FullPath, ".hidden");
+            var hiddenPath = Path.Combine(TestDirectory.FullPath, ".hidden");
             File.WriteAllText(hiddenPath, "hidden content");
 
             if (OperatingSystem.IsWindows())
@@ -170,7 +162,7 @@ namespace Rheo.Storage.Test.Information
             }
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
             Assert.True(dirInfo.NoOfFiles >= 1, "Should count hidden files");
@@ -180,7 +172,7 @@ namespace Rheo.Storage.Test.Information
         public void NoOfDirectories_WithHiddenDirectories_CountsHiddenDirectories()
         {
             // Arrange
-            var hiddenDirPath = Path.Combine(_testDir.FullPath, ".hidden_dir");
+            var hiddenDirPath = Path.Combine(TestDirectory.FullPath, ".hidden_dir");
             Directory.CreateDirectory(hiddenDirPath);
 
             if (OperatingSystem.IsWindows())
@@ -190,7 +182,7 @@ namespace Rheo.Storage.Test.Information
             }
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
             Assert.True(dirInfo.NoOfDirectories >= 1, "Should count hidden directories");
@@ -200,23 +192,23 @@ namespace Rheo.Storage.Test.Information
         public void Size_WithEmptyFiles_CalculatesAsZero()
         {
             // Arrange
-            File.WriteAllBytes(Path.Combine(_testDir.FullPath, "empty1.bin"), []);
-            File.WriteAllBytes(Path.Combine(_testDir.FullPath, "empty2.bin"), []);
-            File.WriteAllBytes(Path.Combine(_testDir.FullPath, "empty3.bin"), []);
+            File.WriteAllBytes(Path.Combine(TestDirectory.FullPath, "empty1.bin"), []);
+            File.WriteAllBytes(Path.Combine(TestDirectory.FullPath, "empty2.bin"), []);
+            File.WriteAllBytes(Path.Combine(TestDirectory.FullPath, "empty3.bin"), []);
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
-            Assert.Equal(0UL, dirInfo.Size);
+            Assert.Equal(0L, dirInfo.Size);
         }
 
         [Fact]
         public void Equals_WithSamePathTrailingSlash_ReturnsTrue()
         {
             // Arrange
-            var pathWithSlash = _testDir.FullPath + Path.DirectorySeparatorChar;
-            var pathWithoutSlash = _testDir.FullPath;
+            var pathWithSlash = TestDirectory.FullPath + Path.DirectorySeparatorChar;
+            var pathWithoutSlash = TestDirectory.FullPath;
 
             // Act
             var dirInfo1 = new DirectoryInformation(pathWithSlash);
@@ -234,15 +226,15 @@ namespace Rheo.Storage.Test.Information
             // Arrange
             for (int i = 0; i < 50; i++)
             {
-                File.WriteAllText(Path.Combine(_testDir.FullPath, $"f{i}.txt"), "data");
+                File.WriteAllText(Path.Combine(TestDirectory.FullPath, $"f{i}.txt"), "data");
             }
             for (int i = 0; i < 25; i++)
             {
-                Directory.CreateDirectory(Path.Combine(_testDir.FullPath, $"d{i}"));
+                Directory.CreateDirectory(Path.Combine(TestDirectory.FullPath, $"d{i}"));
             }
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
             var result = dirInfo.ToString();
 
             // Assert
@@ -254,7 +246,7 @@ namespace Rheo.Storage.Test.Information
         public void NoOfFiles_WithSymbolicLinks_HandlesGracefully()
         {
             // Arrange
-            var targetFile = Path.Combine(_testDir.FullPath, "target.txt");
+            var targetFile = Path.Combine(TestDirectory.FullPath, "target.txt");
             File.WriteAllText(targetFile, "content");
 
             // Note: Creating symbolic links requires elevated privileges on Windows
@@ -262,7 +254,7 @@ namespace Rheo.Storage.Test.Information
             // in a standard test environment
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
             Assert.True(dirInfo.NoOfFiles >= 1);
@@ -273,26 +265,26 @@ namespace Rheo.Storage.Test.Information
         {
             // Arrange: Create files that sum to a large size
             // Using ulong to test large values
-            var file1 = Path.Combine(_testDir.FullPath, "file1.bin");
-            var file2 = Path.Combine(_testDir.FullPath, "file2.bin");
+            var file1 = Path.Combine(TestDirectory.FullPath, "file1.bin");
+            var file2 = Path.Combine(TestDirectory.FullPath, "file2.bin");
 
             var data = new byte[1024]; // 1KB each
             File.WriteAllBytes(file1, data);
             File.WriteAllBytes(file2, data);
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
-            Assert.Equal(2048UL, dirInfo.Size);
-            Assert.IsType<ulong>(dirInfo.Size);
+            Assert.Equal(2048L, dirInfo.Size);
+            Assert.IsType<long>(dirInfo.Size);
         }
 
         [Fact]
         public void Constructor_WithNetworkPath_HandlesIfAvailable()
         {
             // Arrange
-            var localPath = _testDir.FullPath;
+            var localPath = TestDirectory.FullPath;
 
             // Act
             var dirInfo = new DirectoryInformation(localPath);
@@ -307,7 +299,7 @@ namespace Rheo.Storage.Test.Information
         public void NoOfFiles_WithVeryLongPath_HandlesCorrectly()
         {
             // Arrange: Create a moderately long path
-            var longDirPath = _testDir.FullPath;
+            var longDirPath = TestDirectory.FullPath;
             for (int i = 0; i < 5; i++)
             {
                 longDirPath = Path.Combine(longDirPath, $"very_long_directory_name_{i}");
@@ -317,16 +309,10 @@ namespace Rheo.Storage.Test.Information
             File.WriteAllText(Path.Combine(longDirPath, "file.txt"), "content");
 
             // Act
-            var dirInfo = new DirectoryInformation(_testDir.FullPath);
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
             Assert.True(dirInfo.NoOfFiles >= 1);
-        }
-
-        public void Dispose()
-        {
-            _testDir?.Dispose();
-            GC.SuppressFinalize(this);
         }
     }
 }

@@ -1,25 +1,17 @@
 using Rheo.Storage.Information;
-using Rheo.Storage.Test.Models;
 using Rheo.Storage.Test.Utilities;
 
 namespace Rheo.Storage.Test.Information
 {
     [Trait(TestTraits.Feature, "FileInformation")]
     [Trait(TestTraits.Category, "Edge Case Tests")]
-    public class FileInformationEdgeCaseTests : IDisposable
+    public class FileInformationEdgeCaseTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
     {
-        private readonly TestDirectory _testDir;
-
-        public FileInformationEdgeCaseTests()
-        {
-            _testDir = TestDirectory.Create();
-        }
-
         [Fact]
         public void Constructor_WithEmptyFile_HandlesGracefully()
         {
             // Arrange
-            var emptyFilePath = Path.Combine(_testDir.FullPath, "empty.bin");
+            var emptyFilePath = Path.Combine(TestDirectory.FullPath, "empty.bin");
             File.WriteAllBytes(emptyFilePath, []);
 
             // Act
@@ -27,7 +19,7 @@ namespace Rheo.Storage.Test.Information
 
             // Assert
             Assert.NotNull(fileInfo);
-            Assert.Equal(0UL, fileInfo.Size);
+            Assert.Equal(0L, fileInfo.Size);
             Assert.NotNull(fileInfo.TypeName);
         }
 
@@ -35,7 +27,7 @@ namespace Rheo.Storage.Test.Information
         public void TypeName_WithUnknownFile_ReturnsUnknownOrFallback()
         {
             // Arrange: File with unknown binary pattern
-            var unknownPath = Path.Combine(_testDir.FullPath, "unknown.xyz");
+            var unknownPath = Path.Combine(TestDirectory.FullPath, "unknown.xyz");
             byte[] unknownData = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22];
             File.WriteAllBytes(unknownPath, unknownData);
 
@@ -52,7 +44,7 @@ namespace Rheo.Storage.Test.Information
         public void Extension_WithNoExtension_ReturnsEmptyOrNull()
         {
             // Arrange: File without extension
-            var noExtPath = Path.Combine(_testDir.FullPath, "filenoext");
+            var noExtPath = Path.Combine(TestDirectory.FullPath, "filenoext");
             File.WriteAllBytes(noExtPath, [0x89, 0x50, 0x4E, 0x47]); // PNG signature
 
             // Act
@@ -67,8 +59,8 @@ namespace Rheo.Storage.Test.Information
         public void ActualExtension_WithMismatchedExtension_DetectsCorrectType()
         {
             // Arrange: PNG file with .txt extension
-            var mismatchPath = Path.Combine(_testDir.FullPath, "fake.txt");
-            var (pngData, _) = TestFileProvider.GetImageFile(_testDir.FullPath);
+            var mismatchPath = Path.Combine(TestDirectory.FullPath, "fake.txt");
+            var (pngData, _) = TestFileProvider.GetImageFile(TestDirectory.FullPath);
             File.WriteAllBytes(mismatchPath, pngData);
 
             // Act
@@ -84,7 +76,7 @@ namespace Rheo.Storage.Test.Information
         public void Constructor_WithNonExistentFile_ThrowsException()
         {
             // Arrange
-            var nonExistentPath = Path.Combine(_testDir.FullPath, "nonexistent.bin");
+            var nonExistentPath = Path.Combine(TestDirectory.FullPath, "nonexistent.bin");
 
             // Act & Assert
             Assert.Throws<FileNotFoundException>(() => new FileInformation(nonExistentPath));
@@ -94,11 +86,11 @@ namespace Rheo.Storage.Test.Information
         public void IdentificationReport_WithLargeFile_CompletesSuccessfully()
         {
             // Arrange: Create a larger file
-            var largePath = Path.Combine(_testDir.FullPath, "large.bin");
+            var largePath = Path.Combine(TestDirectory.FullPath, "large.bin");
             byte[] largeData = new byte[100 * 1024]; // 100KB
             
             // Fill with PDF signature
-            var (pdfData, _) = TestFileProvider.GetDocumentFile(_testDir.FullPath);
+            var (pdfData, _) = TestFileProvider.GetDocumentFile(TestDirectory.FullPath);
             Array.Copy(pdfData, 0, largeData, 0, Math.Min(pdfData.Length, largeData.Length));
             File.WriteAllBytes(largePath, largeData);
 
@@ -115,7 +107,7 @@ namespace Rheo.Storage.Test.Information
         public void Equals_WithCaseInsensitivePaths_HandlesCorrectly()
         {
             // Arrange
-            var testPath = Path.Combine(_testDir.FullPath, "TestFile.bin");
+            var testPath = Path.Combine(TestDirectory.FullPath, "TestFile.bin");
             File.WriteAllBytes(testPath, [0x50, 0x4B, 0x03, 0x04]);
 
             // Act
@@ -134,8 +126,8 @@ namespace Rheo.Storage.Test.Information
         public void TypeName_PrefersLongerDescription()
         {
             // Arrange: Create a well-known file type
-            var pdfPath = Path.Combine(_testDir.FullPath, "test.pdf");
-            var (pdfData, _) = TestFileProvider.GetDocumentFile(_testDir.FullPath);
+            var pdfPath = Path.Combine(TestDirectory.FullPath, "test.pdf");
+            var (pdfData, _) = TestFileProvider.GetDocumentFile(TestDirectory.FullPath);
             File.WriteAllBytes(pdfPath, pdfData);
 
             // Act
@@ -151,7 +143,7 @@ namespace Rheo.Storage.Test.Information
         public void IdentificationReport_WithMultipleMatches_ReturnsOrderedResults()
         {
             // Arrange: ZIP signature can match multiple formats
-            var zipPath = Path.Combine(_testDir.FullPath, "test.zip");
+            var zipPath = Path.Combine(TestDirectory.FullPath, "test.zip");
             byte[] zipSignature = [0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00];
             File.WriteAllBytes(zipPath, zipSignature);
 
@@ -173,8 +165,8 @@ namespace Rheo.Storage.Test.Information
         public async Task Constructor_AccessedConcurrently_HandlesThreadSafelyAsync()
         {
             // Arrange
-            var testPath = Path.Combine(_testDir.FullPath, "concurrent.bin");
-            var (imageData, _) = TestFileProvider.GetImageFile(_testDir.FullPath);
+            var testPath = Path.Combine(TestDirectory.FullPath, "concurrent.bin");
+            var (imageData, _) = TestFileProvider.GetImageFile(TestDirectory.FullPath);
             File.WriteAllBytes(testPath, imageData);
 
             // Act
@@ -197,7 +189,7 @@ namespace Rheo.Storage.Test.Information
         public void MimeType_WithEmptyFile_ReturnsDefaultOrEmpty()
         {
             // Arrange
-            var emptyPath = Path.Combine(_testDir.FullPath, "empty.dat");
+            var emptyPath = Path.Combine(TestDirectory.FullPath, "empty.dat");
             File.WriteAllBytes(emptyPath, []);
 
             // Act
@@ -212,7 +204,7 @@ namespace Rheo.Storage.Test.Information
         public void GetHashCode_IsCaseInsensitive()
         {
             // Arrange
-            var path1 = Path.Combine(_testDir.FullPath, "Hash.bin");
+            var path1 = Path.Combine(TestDirectory.FullPath, "Hash.bin");
             File.WriteAllBytes(path1, [0x00, 0x01]);
 
             // Act
@@ -231,8 +223,8 @@ namespace Rheo.Storage.Test.Information
         public void ToString_IncludesActualExtension()
         {
             // Arrange
-            var testPath = Path.Combine(_testDir.FullPath, "formatted.bin");
-            var (pngData, _) = TestFileProvider.GetImageFile(_testDir.FullPath);
+            var testPath = Path.Combine(TestDirectory.FullPath, "formatted.bin");
+            var (pngData, _) = TestFileProvider.GetImageFile(TestDirectory.FullPath);
             File.WriteAllBytes(testPath, pngData);
 
             // Act
@@ -244,12 +236,6 @@ namespace Rheo.Storage.Test.Information
             Assert.Contains("[", result);
             Assert.Contains("]", result);
             // Should include the actual extension detected from content
-        }
-
-        public void Dispose()
-        {
-            _testDir?.Dispose();
-            GC.SuppressFinalize(this);
         }
     }
 }

@@ -6,12 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <AssemblyName>defbuild</AssemblyName>
+    <AssemblyName>RheoDefBuilder</AssemblyName>
+
+    <AssemblyTitle>Rheo.Storage File Definitions Builder</AssemblyTitle>
+    <Product>Rheo.Storage</Product>
     <Authors>Naveen Dharmathunga</Authors>
-    <Product>Definitions Builder</Product>
+    <Version>1.2.3.0</Version>
     <Copyright>© 2025 Naveen Dharmathunga - All Rights Reserved.</Copyright>
-    <AssemblyVersion>1.2.0.0</AssemblyVersion>
-    <FileVersion>1.2.3.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

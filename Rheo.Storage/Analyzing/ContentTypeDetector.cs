@@ -1,7 +1,7 @@
-using Rheo.Storage.FileDefinition.Models;
+using Rheo.Storage.Analyzing.Models;
 using System.Text;
 
-namespace Rheo.Storage.FileDefinition
+namespace Rheo.Storage.Analyzing
 {
     /// <summary>
     /// Provides methods for detecting content types and distinguishing between text and binary files.
@@ -19,7 +19,7 @@ namespace Rheo.Storage.FileDefinition
         /// <param name="buffer">The byte array to analyze for BOM presence. Must not be null.</param>
         /// <param name="encoding">When this method returns, contains the detected encoding if a BOM is found; otherwise, null.</param>
         /// <returns><see langword="true"/> if a BOM was detected and the encoding was identified; otherwise, <see langword="false"/>.</returns>
-        internal static bool TryDetectBOM(byte[] buffer, out Encoding? encoding)
+        public static bool TryDetectBOM(byte[] buffer, out Encoding? encoding)
         {
             encoding = null;
 
@@ -72,7 +72,7 @@ namespace Rheo.Storage.FileDefinition
         /// designed to be robust and handle various text encodings including ASCII, UTF-8, UTF-16, and UTF-32.</remarks>
         /// <param name="buffer">The byte array to analyze. Must not be null or empty.</param>
         /// <returns><see langword="true"/> if the buffer is likely to contain text; <see langword="false"/> if it appears to be binary data.</returns>
-        internal static bool IsTextContent(byte[] buffer)
+        public static bool IsTextContent(byte[] buffer)
         {
             if (buffer.Length == 0)
                 return false;
@@ -148,7 +148,7 @@ namespace Rheo.Storage.FileDefinition
         /// <param name="buffer">The file content buffer to analyze. Must not be null.</param>
         /// <param name="filePath">The path to the file being analyzed, used for extension-based fallback.</param>
         /// <returns>A <see cref="Definition"/> object representing either a plain text file or a generic binary file.</returns>
-        internal static Definition CreateFallbackDefinition(byte[] buffer, string filePath)
+        public static Definition CreateFallbackDefinition(byte[] buffer, string filePath)
         {
             string extension = Path.GetExtension(filePath).TrimStart('.');
             bool isText = IsTextContent(buffer);

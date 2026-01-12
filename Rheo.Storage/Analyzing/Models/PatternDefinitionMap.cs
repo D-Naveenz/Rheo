@@ -1,4 +1,4 @@
-﻿namespace Rheo.Storage.FileDefinition.Models
+﻿namespace Rheo.Storage.Analyzing.Models
 {
     internal class PatternDefinitionMap
     {

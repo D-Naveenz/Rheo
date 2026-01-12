@@ -362,5 +362,7 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-# Secret files
+Solution Specific files
 *.secret.txt
+/build.sh
+/Notes/**/*.*

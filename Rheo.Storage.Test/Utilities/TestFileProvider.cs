@@ -50,7 +50,36 @@ namespace Rheo.Storage.Test.Utilities
                 ResourceType = resourceType, 
                 TestDirectory = testDirectory 
             };
-            await file.WriteAsync(resourceBytes, true, cancellationToken: cancellationToken);
+            await file.WriteAsync(resourceBytes, true, cancellationToken);
+
+            // Add the file to the test directory's collection
+            testDirectory.TestFiles.Add(file);
+
+            return file;
+        }
+
+        public static TestFile CreateTestFile(this TestDirectory testDirectory, ResourceType resourceType)
+        {
+            byte[] resourceBytes;
+            string filepath;
+
+            (resourceBytes, filepath) = resourceType switch
+            {
+                ResourceType.Text => GetTextFile(testDirectory.FullPath),
+                ResourceType.Image => GetImageFile(testDirectory.FullPath),
+                ResourceType.Video => GetVideoFile(testDirectory.FullPath),
+                ResourceType.Binary => GetBinaryFile(testDirectory.FullPath),
+                ResourceType.Document => GetDocumentFile(testDirectory.FullPath),
+                _ => throw new ArgumentOutOfRangeException(nameof(resourceType), resourceType, null),
+            };
+
+            // Create and return the TestFile instance
+            var file = new TestFile(filepath)
+            {
+                ResourceType = resourceType,
+                TestDirectory = testDirectory
+            };
+            file.Write(resourceBytes, true);
 
             // Add the file to the test directory's collection
             testDirectory.TestFiles.Add(file);

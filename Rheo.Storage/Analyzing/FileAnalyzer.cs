@@ -1,7 +1,7 @@
-using Rheo.Storage.FileDefinition.Models;
-using Rheo.Storage.FileDefinition.Models.Result;
+using Rheo.Storage.Analyzing.Models;
+using Rheo.Storage.Analyzing.Models.Result;
 
-namespace Rheo.Storage.FileDefinition
+namespace Rheo.Storage.Analyzing
 {
     /// <summary>
     /// Provides static methods for analyzing files and identifying candidate definitions based on file header patterns

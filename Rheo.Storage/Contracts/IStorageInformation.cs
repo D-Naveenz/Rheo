@@ -48,7 +48,7 @@ namespace Rheo.Storage.Contracts
         /// <summary>
         /// The size of the storage object in bytes.
         /// </summary>
-        ulong Size { get; }
+        long Size { get; }
 
         /// <summary>
         /// The formatted size of the storage object (e.g., "1.2 MB").
@@ -102,17 +102,17 @@ namespace Rheo.Storage.Contracts
         /// <summary>
         /// The user ID of the owner (Unix only).
         /// </summary>
-        uint? OwnerId { get; }
+        int? OwnerId { get; }
 
         /// <summary>
         /// The group ID of the owner (Unix only).
         /// </summary>
-        uint? GroupId { get; }
+        int? GroupId { get; }
 
         /// <summary>
         /// The file mode (permissions) of the storage object (Unix only).
         /// </summary>
-        uint? Mode { get; }
+        int? Mode { get; }
         #endregion
 
         /// <summary>

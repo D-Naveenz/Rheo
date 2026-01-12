@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace Rheo.Storage.Test.Models
+﻿namespace Rheo.Storage.Test.Models
 {
     /// <summary>
     /// Represents a test file used for storing and managing test data within a test directory.
@@ -24,66 +22,31 @@ namespace Rheo.Storage.Test.Models
         /// <summary>
         /// Gets a value indicating whether the item is marked as temporary.
         /// </summary>
-        public bool IsTemporary => Information.IsTemporary;
+        public bool IsTemporary => Information?.IsTemporary ?? false;
 
         /// <summary>
-        /// Asynchronously writes the specified content to the file represented by this instance.
+        /// Asynchronously writes the specified byte array to storage.
         /// </summary>
-        /// <remarks>If overwrite is set to false and the file already exists, an exception is thrown.
-        /// Progress updates are reported periodically if a progress reporter is provided. The method is asynchronous
-        /// and does not block the calling thread.</remarks>
-        /// <param name="content">The byte array containing the data to write to the file. Cannot be null.</param>
-        /// <param name="overwrite">true to overwrite the file if it already exists; false to throw an exception if the file exists.</param>
-        /// <param name="progress">An optional progress reporter that receives updates about the number of bytes transferred and the transfer
-        /// rate. May be null.</param>
+        /// <param name="content">The byte array containing the data to write. Cannot be null.</param>
+        /// <param name="overwrite">true to overwrite existing content if present; otherwise, false to prevent overwriting.</param>
+        /// <param name="progress">An optional progress reporter that receives storage operation progress updates. May be null if progress
+        /// reporting is not required.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the write operation.</param>
         /// <returns>A task that represents the asynchronous write operation.</returns>
-        public async Task WriteAsync(
-            byte[] content,
-            bool overwrite = false, 
-            IProgress<StorageProgress>? progress = null,
-            CancellationToken cancellationToken = default
-            )
+        public async Task WriteAsync(byte[] content, bool overwrite = false, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(content);
-            var bufferSize = GetBufferSize(Information.Size);
 
             using var memoryStream = new MemoryStream(content);
-            using var destStream = new FileStream(
-                FullPath,
-                overwrite ? FileMode.Create : FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize,
-                true);
+            await WriteAsync(memoryStream, overwrite, cancellationToken);
+        }
 
-            long totalBytes = memoryStream.Length;
-            long totalBytesWritten = 0;
-            Stopwatch stopwatch = Stopwatch.StartNew();
+        public void Write(byte[] content, bool overwrite = false)
+        {
+            ArgumentNullException.ThrowIfNull(content);
 
-            byte[] buffer = new byte[bufferSize];
-            int bytesWritten;
-            while ((bytesWritten = await memoryStream.ReadAsync(buffer, cancellationToken)) > 0)
-            {
-                await destStream.WriteAsync(buffer.AsMemory(0, bytesWritten), cancellationToken);
-                totalBytesWritten += bytesWritten;
-                if (progress != null)
-                {
-                    double bytesPerSecond = totalBytesWritten / stopwatch.Elapsed.TotalSeconds;
-                    progress.Report(new StorageProgress
-                    {
-                        TotalBytes = totalBytes,
-                        BytesTransferred = totalBytesWritten,
-                        BytesPerSecond = bytesPerSecond
-                    });
-                }
-            }
-
-            // Ensure all data is flushed to the file
-            await destStream.FlushAsync(cancellationToken);
-
-            // Raise the Event
-            OnStorageChanged(new(FullPath, StorageChangeType.Created));
+            using var memoryStream = new MemoryStream(content);
+            Write(memoryStream, overwrite);
         }
     }
 }

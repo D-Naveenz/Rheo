@@ -1,4 +1,6 @@
-﻿namespace Rheo.Storage.FileDefinition.Models.Result
+﻿using Rheo.Storage.Analyzing.Models;
+
+namespace Rheo.Storage.Analyzing.Models.Result
 {
     /// <summary>
     /// Represents the result of an analysis, including the set of definitions and their associated metadata such as

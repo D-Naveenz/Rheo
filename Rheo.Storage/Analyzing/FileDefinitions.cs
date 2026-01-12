@@ -1,8 +1,8 @@
 ﻿using MessagePack;
-using Rheo.Storage.FileDefinition.Models;
+using Rheo.Storage.Analyzing.Models;
 using Rheo.Storage.Properties;
 
-namespace Rheo.Storage.FileDefinition
+namespace Rheo.Storage.Analyzing
 {
     internal class FileDefinitions
     {
