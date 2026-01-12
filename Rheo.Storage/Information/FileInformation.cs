@@ -1,5 +1,5 @@
-﻿using Rheo.Storage.Analysing;
-using Rheo.Storage.Analysing.Models.Result;
+﻿using Rheo.Storage.Analyzing;
+using Rheo.Storage.Analyzing.Models.Result;
 using Rheo.Storage.Contracts;
 
 namespace Rheo.Storage.Information

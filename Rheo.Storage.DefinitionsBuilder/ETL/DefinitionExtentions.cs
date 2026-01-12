@@ -1,4 +1,4 @@
-﻿using Rheo.Storage.Analysing.Models;
+﻿using Rheo.Storage.Analyzing.Models;
 
 namespace Rheo.Storage.DefinitionsBuilder.ETL
 {

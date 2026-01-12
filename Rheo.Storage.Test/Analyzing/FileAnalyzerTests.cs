@@ -1,8 +1,8 @@
-using Rheo.Storage.Analysing;
+using Rheo.Storage.Analyzing;
 using Rheo.Storage.Test.Models;
 using Rheo.Storage.Test.Utilities;
 
-namespace Rheo.Storage.Test.Analysing
+namespace Rheo.Storage.Test.Analyzing
 {
     [Trait(TestTraits.Feature, "FileAnalyzer")]
     [Trait(TestTraits.Category, "Default Tests")]

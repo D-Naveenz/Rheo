@@ -45,8 +45,8 @@ $ProjectRoot = Split-Path $ScriptRoot -Parent
 # Paths
 $ProjectFile = Join-Path $ScriptRoot 'Rheo.Storage.DefinitionsBuilder.csproj'
 $BuildOutputDir = Join-Path $ScriptRoot "bin\$Configuration\net9.0"
-$DefBuildExe = Join-Path $BuildOutputDir 'defbuild.exe'
-$DefBuildDll = Join-Path $BuildOutputDir 'defbuild.dll'
+$DefBuildExe = Join-Path $BuildOutputDir 'RheoDefBuilder.exe'
+$DefBuildDll = Join-Path $BuildOutputDir 'RheoDefBuilder.dll'
 
 # Resolve output path
 $ResolvedOutputPath = if ([System.IO.Path]::IsPathRooted($OutputPath)) {

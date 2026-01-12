@@ -1,7 +1,7 @@
 ﻿using MessagePack;
 using System.Text.Json.Serialization;
 
-namespace Rheo.Storage.Analysing.Models
+namespace Rheo.Storage.Analyzing.Models
 {
     /// <summary>
     /// Represents a package containing a collection of file type definitions, version information, creation date, and associated tags.

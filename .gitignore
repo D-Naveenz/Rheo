@@ -365,3 +365,4 @@ FodyWeavers.xsd
 Solution Specific files
 *.secret.txt
 /build.sh
+/Notes/**/*.*

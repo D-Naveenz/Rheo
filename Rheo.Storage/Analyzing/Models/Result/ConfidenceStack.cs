@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 
-namespace Rheo.Storage.Analysing.Models.Result
+namespace Rheo.Storage.Analyzing.Models.Result
 {
     /// <summary>
     /// Represents a collection that tracks unique values and their associated confidence scores, allowing items to be
