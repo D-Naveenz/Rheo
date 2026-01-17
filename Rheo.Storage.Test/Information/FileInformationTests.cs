@@ -3,8 +3,8 @@ using Rheo.Storage.Test.Extensions;
 
 namespace Rheo.Storage.Test.Information
 {
-    [Trait(TestTraits.Feature, "FileInformation")]
-    [Trait(TestTraits.Category, "Default Tests")]
+    [Feature("FileInformation")]
+    [Category("Default Tests")]
     public class FileInformationTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
     {
         [Fact]

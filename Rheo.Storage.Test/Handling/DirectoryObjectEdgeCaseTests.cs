@@ -2,8 +2,8 @@
 
 namespace Rheo.Storage.Test.Handling;
 
-[Trait(TestTraits.Feature, "DirectoryObject")]
-[Trait(TestTraits.Category, "Edge Case Tests")]
+[Feature("DirectoryObject")]
+[Category("Edge Case Tests")]
 public class DirectoryObjectEdgeCaseTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
 {
     [Fact]

@@ -77,25 +77,20 @@ namespace Rheo.Storage.Extensions
         }
 
         /// <summary>
-        /// Creates a new temporary file containing the specified data and adds it to the set of tracked temporary
-        /// files.
+        /// Creates a new file in the current storage location using the specified data and optional file name.
         /// </summary>
-        /// <remarks>The returned TempFile is tracked by the current storage instance and will be managed
-        /// according to its lifecycle. The file is created in the directory specified by FullPath. Callers are
-        /// responsible for disposing of the TempFile when it is no longer needed.</remarks>
-        /// <param name="data">The byte array containing the data to write to the new temporary file. Cannot be null.</param>
-        /// <param name="name">The optional name to assign to the temporary file. If null or whitespace, a unique name is generated
-        /// automatically.</param>
-        /// <returns>A TempFile instance representing the newly created and tracked temporary file.</returns>
-        public TempFile CreateFile(byte[] data, string? name = null)
+        /// <remarks>The created file is tracked by the storage object and will raise change notifications
+        /// when modified. The file is created in the directory specified by the current storage object's
+        /// path.</remarks>
+        /// <param name="data">The byte array containing the data to write to the new file. Cannot be null.</param>
+        /// <param name="name">The name to assign to the new file. If null or whitespace, a unique temporary name is generated.</param>
+        /// <returns>An <see cref="IFileObject"/> representing the newly created file.</returns>
+        public IFileObject CreateFile(byte[] data, string? name = null)
         {
             var fileName = string.IsNullOrWhiteSpace(name)? $"temp_{Guid.NewGuid():N}" : name;
             var filePath = Path.Combine(FullPath, fileName);
 
-            var file = new TempFile(filePath)
-            {
-                TestDirectory = this
-            };
+            var file = new FileObject(filePath);
             file.Write(data);
             _trackingObjects.Add(file);
 
@@ -104,26 +99,24 @@ namespace Rheo.Storage.Extensions
         }
 
         /// <summary>
-        /// Asynchronously creates a new temporary file containing the specified data.
+        /// Asynchronously creates a new file containing the specified data and returns a reference to the created file
+        /// object.
         /// </summary>
-        /// <remarks>The created file is tracked by the current directory instance and will be deleted
-        /// when the directory is cleaned up. The file is immediately available for further operations after
-        /// creation.</remarks>
-        /// <param name="data">The byte array to write to the newly created file. Cannot be null.</param>
-        /// <param name="name">The optional name of the file to create. If null or whitespace, a unique name is generated.</param>
+        /// <remarks>The returned file object is tracked for further operations. The file is created in
+        /// the directory represented by this instance.</remarks>
+        /// <param name="data">The byte array containing the data to write to the new file. Cannot be null.</param>
+        /// <param name="name">The optional name for the new file. If null or whitespace, a unique temporary name is generated.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result contains a TempFile representing the
-        /// created file.</returns>
-        public async Task<TempFile> CreateFileAsync(byte[] data, string? name = null, CancellationToken cancellationToken = default)
+        /// <returns>A task that represents the asynchronous operation. The task result contains an <see cref="IFileObject"/>
+        /// representing the newly created file.</returns>
+        public async Task<IFileObject> CreateFileAsync(byte[] data, string? name = null, CancellationToken cancellationToken = default)
         {
             var fileName = string.IsNullOrWhiteSpace(name) ? $"temp_{Guid.NewGuid():N}" : name;
             var filePath = Path.Combine(FullPath, fileName);
 
-            var file = new TempFile(filePath)
-            {
-                TestDirectory = this
-            };
-            await file.WriteAsync(data, cancellationToken);
+            var file = new FileObject(filePath);
+            using var stream = new MemoryStream(data);
+            await file.WriteAsync(stream, cancellationToken);
             _trackingObjects.Add(file);
 
             file.Changed += StorageObject_Changed;

@@ -1,10 +1,9 @@
 ﻿using Rheo.Storage.Test.Extensions;
-using System.Threading.Tasks;
 
 namespace Rheo.Storage.Test.Handling;
 
-[Trait(TestTraits.Feature, "DirectoryObject")]
-[Trait(TestTraits.Category, "Storage Operations")]
+[Feature("DirectoryObject")]
+[Category("Storage Operations")]
 public class DirectoryObjectTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
 {
     #region Constructor Tests

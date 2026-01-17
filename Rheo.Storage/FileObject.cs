@@ -1,6 +1,7 @@
 ﻿using Rheo.Storage.Contracts;
 using Rheo.Storage.Core;
 using Rheo.Storage.Information;
+using System;
 
 namespace Rheo.Storage
 {
@@ -135,21 +136,21 @@ namespace Rheo.Storage
         }
 
         /// <inheritdoc/>
-        public void Write(Stream stream)
+        public void Write(byte[] content)
         {
             ThrowIfDisposed();
 
-            // ✅ NO LOCK - FileHandling.Write already locks
-            WriteInternal(stream, null);
+            using var memoryStream = new MemoryStream(content);
+            WriteInternal(memoryStream, null);  // ✅ NO LOCK - WriteInternal already locks
         }
 
         /// <inheritdoc/>
-        public void Write(Stream stream, IProgress<StorageProgress> progress)
+        public void Write(byte[] content, IProgress<StorageProgress> progress)
         {
             ThrowIfDisposed();
 
-            // ✅ NO LOCK - FileHandling.Write already locks
-            WriteInternal(stream, progress);
+            using var memoryStream = new MemoryStream(content);
+            WriteInternal(memoryStream, progress);  // ✅ NO LOCK - WriteInternal already locks
         }
 
         /// <inheritdoc/>

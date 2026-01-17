@@ -3,8 +3,8 @@ using Rheo.Storage.Test.Extensions;
 
 namespace Rheo.Storage.Test.Analyzing
 {
-    [Trait(TestTraits.Feature, "FileAnalyzer")]
-    [Trait(TestTraits.Category, "Edge Case Tests")]
+    [Feature("FileAnalyzer")]
+    [Category("Edge Case Tests")]
     public class FileAnalyzerEdgeCaseTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
     {
         [Fact]

@@ -1,4 +1,5 @@
-﻿using Rheo.Storage.Extensions;
+﻿using Rheo.Storage.Contracts;
+using Rheo.Storage.Extensions;
 using System.Text;
 
 namespace Rheo.Storage.Test.Extensions
@@ -16,16 +17,26 @@ namespace Rheo.Storage.Test.Extensions
     {
         private const string TestFilesDirectory = "TestFiles";
 
-        /// <summary>
-        /// Asynchronously creates a test file of the specified resource type within the given test directory.
-        /// </summary>
-        /// <param name="testDirectory">The test directory in which to create the file. Cannot be null.</param>
-        /// <param name="resourceType">The type of resource file to create. Must be a defined value of the ResourceType enumeration.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result contains a TestFile instance representing
-        /// the created file.</returns>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if resourceType is not a valid value of the ResourceType enumeration.</exception>
-        public static async Task<TempFile> CreateTemplateFileAsync(
+        public static IFileObject CreateTemplateFile(this TempDirectory testDirectory, ResourceType resourceType)
+        {
+            byte[] resourceBytes;
+            string filepath;
+
+            (resourceBytes, filepath) = resourceType switch
+            {
+                ResourceType.Text => GetTextFile(testDirectory.FullPath),
+                ResourceType.Image => GetImageFile(testDirectory.FullPath),
+                ResourceType.Video => GetVideoFile(testDirectory.FullPath),
+                ResourceType.Binary => GetBinaryFile(testDirectory.FullPath),
+                ResourceType.Document => GetDocumentFile(testDirectory.FullPath),
+                _ => throw new ArgumentOutOfRangeException(nameof(resourceType), resourceType, null),
+            };
+
+            // Create and return the TestFile instance
+            return testDirectory.CreateFile(resourceBytes, filepath);
+        }
+
+        public static async Task<IFileObject> CreateTemplateFileAsync(
             this TempDirectory testDirectory, 
             ResourceType resourceType, 
             CancellationToken cancellationToken = default
@@ -48,33 +59,6 @@ namespace Rheo.Storage.Test.Extensions
             return await testDirectory.CreateFileAsync(resourceBytes, filepath, cancellationToken);
         }
 
-        public static TempFile CreateTemplateFile(this TempDirectory testDirectory, ResourceType resourceType)
-        {
-            byte[] resourceBytes;
-            string filepath;
-
-            (resourceBytes, filepath) = resourceType switch
-            {
-                ResourceType.Text => GetTextFile(testDirectory.FullPath),
-                ResourceType.Image => GetImageFile(testDirectory.FullPath),
-                ResourceType.Video => GetVideoFile(testDirectory.FullPath),
-                ResourceType.Binary => GetBinaryFile(testDirectory.FullPath),
-                ResourceType.Document => GetDocumentFile(testDirectory.FullPath),
-                _ => throw new ArgumentOutOfRangeException(nameof(resourceType), resourceType, null),
-            };
-
-            // Create and return the TestFile instance
-            return testDirectory.CreateFile(resourceBytes, filepath);
-        }
-
-        /// <summary>
-        /// Retrieves the contents and target path of a text file for testing purposes.
-        /// </summary>
-        /// <param name="tempDir">An optional directory path in which to create the sample file if no text file is found. If null, a default
-        /// temporary directory is used.</param>
-        /// <returns>A tuple containing the byte contents of a text file and the full path where the file is or would be located.
-        /// If no text file exists in the source directory, a sample file is generated and its contents and path are
-        /// returned.</returns>
         public static (byte[], string) GetTextFile(string? tempDir = null)
         {
             var sourceDirectory = GetTestFilesPath();
@@ -95,17 +79,6 @@ namespace Rheo.Storage.Test.Extensions
             return (sampleBytes, sampleFilePath);
         }
 
-        /// <summary>
-        /// Retrieves the contents and target file path of a PNG image file for testing purposes.
-        /// </summary>
-        /// <remarks>If no PNG file is found in the test files directory, a small sample PNG image is
-        /// created and used instead. The returned file path indicates where the image would be located or created,
-        /// which can be useful for test scenarios that require both the image data and its file path.</remarks>
-        /// <param name="tempDir">An optional directory path where the sample image file will be created if no PNG file is found. If null, a
-        /// default temporary directory is used.</param>
-        /// <returns>A tuple containing a byte array with the image file contents and a string representing the target file path.
-        /// If a PNG file exists in the test files directory, its contents are returned; otherwise, a sample PNG image
-        /// is generated and returned.</returns>
         public static (byte[], string) GetImageFile(string? tempDir = null)
         {
             var sourceDirectory = GetTestFilesPath();
@@ -129,19 +102,6 @@ namespace Rheo.Storage.Test.Extensions
             return (sampleBytes, sampleFilePath);
         }
 
-        /// <summary>
-        /// Retrieves the contents of a binary test file as a byte array, along with the path where a sample binary file
-        /// would be created.
-        /// </summary>
-        /// <remarks>If a .bin file is present in the test files directory, its contents are returned.
-        /// Otherwise, a sample binary file is created in the target directory and its contents are returned. The
-        /// returned file path indicates where the sample file would be located, regardless of whether an existing or
-        /// generated file is used.</remarks>
-        /// <param name="tempDir">An optional directory path to use as the target location for the sample file. If null, a default temporary
-        /// directory is used.</param>
-        /// <returns>A tuple containing the binary file's contents as a byte array and the full path to the sample binary file.
-        /// If no binary file exists in the source directory, a sample binary file is generated and its contents and
-        /// path are returned.</returns>
         public static (byte[], string) GetBinaryFile(string? tempDir = null)
         {
             var sourceDirectory = GetTestFilesPath();
@@ -162,18 +122,6 @@ namespace Rheo.Storage.Test.Extensions
             return (sampleBytes, sampleFilePath);
         }
 
-        /// <summary>
-        /// Retrieves the contents of a sample PDF file as a byte array, along with the file path where the PDF is or
-        /// would be located in the test environment.
-        /// </summary>
-        /// <remarks>If no PDF file is found in the test files directory, a minimal valid PDF is created
-        /// in the target directory and returned. This method is intended for use in test scenarios where a sample PDF
-        /// file is required.</remarks>
-        /// <param name="tempDir">An optional directory path to use as the temporary target location for the sample PDF file. If null, a
-        /// default test directory is used.</param>
-        /// <returns>A tuple containing the PDF file's contents as a byte array and the full file path as a string. If a PDF file
-        /// exists in the test files directory, its contents and path are returned; otherwise, a minimal valid PDF file
-        /// is generated and its contents and path are returned.</returns>
         public static (byte[], string) GetDocumentFile(string? tempDir = null)
         {
             var sourceDirectory = GetTestFilesPath();
@@ -217,18 +165,6 @@ namespace Rheo.Storage.Test.Extensions
             return (sampleBytes, sampleFilePath);
         }
 
-        /// <summary>
-        /// Retrieves the contents of a sample MP4 video file and provides the path where it can be saved or used for
-        /// testing purposes.
-        /// </summary>
-        /// <remarks>This method is intended for use in test scenarios where a valid MP4 file is required.
-        /// If no MP4 file is found in the test files directory, a minimal MP4 file is created to ensure a valid file is
-        /// always returned.</remarks>
-        /// <param name="tempDir">An optional directory path to use as the target location for the sample file. If null, a default temporary
-        /// directory is used.</param>
-        /// <returns>A tuple containing a byte array with the MP4 file contents and a string representing the sample file path.
-        /// If a sample MP4 file exists in the test files directory, its contents are returned; otherwise, a minimal
-        /// valid MP4 file is generated.</returns>
         public static (byte[], string) GetVideoFile(string? tempDir = null)
         {
             var sourceDirectory = GetTestFilesPath();

@@ -131,14 +131,19 @@ namespace Rheo.Storage.Contracts
         Task RenameAsync(string newName, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Writes the current object's data to the specified stream, optionally overwriting existing content.
+        /// Writes the specified byte array to the underlying stream or destination.
         /// </summary>
-        void Write(Stream stream);
+        /// <param name="content">The byte array containing the data to write. Cannot be null.</param>
+        void Write(byte[] content);
 
         /// <summary>
-        /// Writes the current object's data to the specified stream with progress reporting.
+        /// Writes the specified content to the storage destination, reporting progress updates as the operation
+        /// proceeds.
         /// </summary>
-        void Write(Stream stream, IProgress<StorageProgress> progress);
+        /// <param name="content">The byte array containing the data to write. Cannot be null.</param>
+        /// <param name="progress">An object that receives progress updates during the write operation. Can be null if progress reporting is
+        /// not required.</param>
+        void Write(byte[] content, IProgress<StorageProgress> progress);
 
         /// <summary>
         /// Asynchronously writes the current object's data to the specified stream, optionally overwriting existing

@@ -2,8 +2,8 @@ using Rheo.Storage.Test.Extensions;
 
 namespace Rheo.Storage.Test.Handling;
 
-[Trait(TestTraits.Feature, "FileObject")]
-[Trait(TestTraits.Category, "Edge Case Tests")]
+[Category("FileObject")]
+[Category("Edge Case Tests")]
 public class FileObjectEdgeCaseTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
 {
     [Fact]
@@ -49,15 +49,15 @@ public class FileObjectEdgeCaseTests(ITestOutputHelper output, TestDirectoryFixt
     }
 
     [Fact]
-    public void Write_EmptyStream_CreatesEmptyFile()
+    public void Write_EmptyData_CreatesEmptyFile()
     {
         // Arrange
         var filePath = Path.Combine(TestDirectory.FullPath, "empty.bin");
         using var fileObj = new FileObject(filePath);
-        using var emptyStream = new MemoryStream();
+        byte[] emptyData = [];
 
         // Act
-        fileObj.Write(emptyStream);
+        fileObj.Write(emptyData);
 
         // Assert
         Assert.True(File.Exists(filePath));

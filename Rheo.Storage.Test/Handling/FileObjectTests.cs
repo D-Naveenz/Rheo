@@ -2,8 +2,8 @@ using Rheo.Storage.Test.Extensions;
 
 namespace Rheo.Storage.Test.Handling;
 
-[Trait(TestTraits.Feature, "FileObject")]
-[Trait(TestTraits.Category, "Storage Operations")]
+[Feature("FileObject")]
+[Category("Storage Operations")]
 public class FileObjectTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
 {
     #region Constructor Tests
