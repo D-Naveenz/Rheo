@@ -25,28 +25,21 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task NoOfFiles_WithMultipleFiles_ReturnsCorrectCountAsync()
+        public void NoOfFiles_WithMultipleFiles_ReturnsCorrectCount()
         {
             // Arrange
-            await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Text,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
-            await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
-            _ = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Binary,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using (TestDirectory.CreateTemplateFile(ResourceType.Text))
+            using (TestDirectory.CreateTemplateFile(ResourceType.Image))
+            using (TestDirectory.CreateTemplateFile(ResourceType.Binary))
+            {
+                // Files created
+            } // All disposed here
 
-            // Act
-            // Ensure file system updates are recognized
-            await Task.Delay(DirectoryObject.DefaultWatchInterval, TestContext.Current.CancellationToken);
+            // Create fresh DirectoryInformation
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Assert
-            Assert.Equal(3, TestDirectory.Information.NoOfFiles);
+            Assert.Equal(3, dirInfo.NoOfFiles);
         }
 
         [Fact]
@@ -57,23 +50,23 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task NoOfFiles_WithNestedFiles_CountsRecursivelyAsync()
+        public void NoOfFiles_WithNestedFiles_CountsRecursively()
         {
             // Arrange
             var subDirPath = Path.Combine(TestDirectory.FullPath, "subdir");
             Directory.CreateDirectory(subDirPath);
 
-            await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Text,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using (TestDirectory.CreateTemplateFile(ResourceType.Text))
+            {
+                // Create a file in subdirectory
+                var subFile = Path.Combine(subDirPath, "test.txt");
+                File.WriteAllText(subFile, "test content");
+            } // Dispose FileObject
 
-            // Create a file in subdirectory
-            var subFile = Path.Combine(subDirPath, "test.txt");
-            File.WriteAllText(subFile, "test content");
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Act & Assert
-            Assert.True(TestDirectory.Information.NoOfFiles >= 2, "Should count files in subdirectories");
+            Assert.True(dirInfo.NoOfFiles >= 2, "Should count files in subdirectories");
         }
 
         [Fact]
@@ -111,23 +104,23 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task Size_WithMultipleFiles_ReturnsTotalSizeAsync()
+        public void Size_WithMultipleFiles_ReturnsTotalSize()
         {
             // Arrange
-            var testFile1 = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Text,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
-            var testFile2 = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            long expectedSize;
 
-            var expectedSize = new FileInfo(testFile1.FullPath).Length + 
+            using (var testFile1 = TestDirectory.CreateTemplateFile(ResourceType.Text))
+            using (var testFile2 = TestDirectory.CreateTemplateFile(ResourceType.Image))
+            {
+                expectedSize = new FileInfo(testFile1.FullPath).Length +
                                new FileInfo(testFile2.FullPath).Length;
+            } // Files disposed here
+
+            // Create fresh DirectoryInformation after files are fully written and closed
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Act & Assert
-            Assert.Equal(expectedSize, TestDirectory.Information.Size);
+            Assert.Equal(expectedSize, dirInfo.Size);
         }
 
         [Fact]
@@ -138,24 +131,27 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task Size_WithNestedFiles_CalculatesRecursivelyAsync()
+        public void Size_WithNestedFiles_CalculatesRecursively()
         {
             // Arrange
             var subDirPath = Path.Combine(TestDirectory.FullPath, "subdir_size");
             Directory.CreateDirectory(subDirPath);
 
-            var rootFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Text,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            long expectedSize;
 
-            var subFile = Path.Combine(subDirPath, "nested.bin");
-            File.WriteAllBytes(subFile, [0x00, 0x01, 0x02, 0x03]);
+            using (var rootFile = TestDirectory.CreateTemplateFile(ResourceType.Text))
+            {
+                var subFile = Path.Combine(subDirPath, "nested.bin");
+                File.WriteAllBytes(subFile, [0x00, 0x01, 0x02, 0x03]);
 
-            var expectedSize = new FileInfo(rootFile.FullPath).Length + 4;
+                expectedSize = new FileInfo(rootFile.FullPath).Length + 4;
+            } // Dispose FileObject to release handle
+
+            // Create fresh DirectoryInformation after files are closed
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
 
             // Act & Assert
-            Assert.Equal(expectedSize, TestDirectory.Information.Size);
+            Assert.Equal(expectedSize, dirInfo.Size);
         }
 
         [Fact]
@@ -203,16 +199,16 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task Equals_WithSamePathDifferentContent_ReturnsTrueAsync()
+        public void Equals_WithSamePathDifferentContent_ReturnsTrue()
         {
             // Arrange
             var dirInfo1 = TestDirectory.Information;
 
             // Add a file to change the directory content
-            await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Text,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using (TestDirectory.CreateTemplateFile(ResourceType.Text))
+            {
+                // File created
+            }
 
             var dirInfo2 = new DirectoryInformation(TestDirectory.FullPath);
 
@@ -251,17 +247,16 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task ToString_IncludesAllCountsAsync()
+        public void ToString_IncludesAllCounts()
         {
             // Arrange - Use isolated subdirectory to avoid interference from other tests
-            await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Text,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
-            Directory.CreateDirectory(Path.Combine(TestDirectory.FullPath, "subdir"));
+            using (TestDirectory.CreateTemplateFile(ResourceType.Text))
+            {
+                Directory.CreateDirectory(Path.Combine(TestDirectory.FullPath, "subdir"));
+            } // Dispose FileObject
 
-            // Act
-            var dirInfo = TestDirectory.Information;
+            // Create fresh DirectoryInformation
+            var dirInfo = new DirectoryInformation(TestDirectory.FullPath);
             var result = dirInfo.ToString();
 
             // Assert
@@ -303,19 +298,19 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task Size_IsCalculatedAtConstruction_NotDynamicallyAsync()
+        public void Size_IsCalculatedAtConstruction_NotDynamicallyAsync()
         {
             // Arrange
             var dirInfo = TestDirectory.Information;
             var initialSize = dirInfo.Size;
 
             // Act - Add a file after construction
-            await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Binary,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using (TestDirectory.CreateTemplateFile(ResourceType.Binary))
+            {
+                // File created
+            }
 
-            // Assert - Size should remain the same
+            // Assert - Size should remain the same (dirInfo was created before the file)
             Assert.Equal(initialSize, dirInfo.Size);
         }
 

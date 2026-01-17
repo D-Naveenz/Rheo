@@ -8,13 +8,10 @@ namespace Rheo.Storage.Test.Information
     public class FileInformationTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
     {
         [Fact]
-        public async Task Constructor_WithValidFilePath_CreatesInstanceAsync()
+        public void Constructor_WithValidFilePath_CreatesInstance()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile = TestDirectory.CreateTemplateFile(ResourceType.Image);
 
             // Act
             var fileInfo = new FileInformation(testFile.FullPath);
@@ -34,13 +31,10 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task TypeName_WithImageFile_ReturnsDescriptiveNameAsync()
+        public void TypeName_WithImageFile_ReturnsDescriptiveName()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile = TestDirectory.CreateTemplateFile(ResourceType.Image);
 
             // Act
             var fileInfo = new FileInformation(testFile.FullPath);
@@ -52,13 +46,10 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task MimeType_WithPngImage_ReturnsPngMimeTypeAsync()
+        public void MimeType_WithPngImage_ReturnsPngMimeType()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile = TestDirectory.CreateTemplateFile(ResourceType.Image);
 
             // Act
             var fileInfo = new FileInformation(testFile.FullPath);
@@ -70,13 +61,10 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task Extension_WithNamedFile_ReturnsCorrectExtensionAsync()
+        public void Extension_WithNamedFile_ReturnsCorrectExtension()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Document,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile = TestDirectory.CreateTemplateFile(ResourceType.Document);
 
             // Act
             var fileInfo = new FileInformation(testFile.FullPath);
@@ -87,13 +75,10 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task ActualExtension_WithPngImage_ReturnsPngExtensionAsync()
+        public void ActualExtension_WithPngImage_ReturnsPngExtension()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile = TestDirectory.CreateTemplateFile(ResourceType.Image);
 
             // Act
             var fileInfo = new FileInformation(testFile.FullPath);
@@ -105,13 +90,10 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task IdentificationReport_WithValidFile_ReturnsNonEmptyResultAsync()
+        public void IdentificationReport_WithValidFile_ReturnsNonEmptyResult()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Video,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile = TestDirectory.CreateTemplateFile(ResourceType.Video);
 
             // Act
             var fileInfo = new FileInformation(testFile.FullPath);
@@ -122,30 +104,28 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task Size_WithKnownFile_ReturnsCorrectSizeAsync()
+        public void Size_WithKnownFile_ReturnsCorrectSize()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Text,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
-            var expectedSize = new FileInfo(testFile.FullPath).Length;
+            long expectedSize;
+            
+            using (var testFile = TestDirectory.CreateTemplateFile(ResourceType.Text))
+            {
+                expectedSize = new FileInfo(testFile.FullPath).Length;
 
-            // Act
-            var fileInfo = new FileInformation(testFile.FullPath);
+                // Act
+                var fileInfo = new FileInformation(testFile.FullPath);
 
-            // Assert
-            Assert.Equal(expectedSize, fileInfo.Size);
+                // Assert
+                Assert.Equal(expectedSize, fileInfo.Size);
+            }
         }
 
         [Fact]
-        public async Task Equals_WithSameFile_ReturnsTrueAsync()
+        public void Equals_WithSameFile_ReturnsTrue()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Binary,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile = TestDirectory.CreateTemplateFile(ResourceType.Binary);
 
             // Act
             var fileInfo1 = new FileInformation(testFile.FullPath);
@@ -158,17 +138,11 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task Equals_WithDifferentFiles_ReturnsFalseAsync()
+        public void Equals_WithDifferentFiles_ReturnsFalse()
         {
             // Arrange
-            var testFile1 = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Text,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
-            var testFile2 = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile1 = TestDirectory.CreateTemplateFile(ResourceType.Text);
+            using var testFile2 = TestDirectory.CreateTemplateFile(ResourceType.Image);
 
             // Act
             var fileInfo1 = new FileInformation(testFile1.FullPath);
@@ -197,13 +171,10 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task GetHashCode_WithSameFile_ReturnsSameHashAsync()
+        public void GetHashCode_WithSameFile_ReturnsSameHash()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Document,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile = TestDirectory.CreateTemplateFile(ResourceType.Document);
 
             // Act
             var fileInfo1 = new FileInformation(testFile.FullPath);
@@ -214,13 +185,10 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task ToString_WithValidFile_ReturnsFormattedStringAsync()
+        public void ToString_WithValidFile_ReturnsFormattedString()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile = TestDirectory.CreateTemplateFile(ResourceType.Image);
 
             // Act
             var fileInfo = new FileInformation(testFile.FullPath);
@@ -238,13 +206,10 @@ namespace Rheo.Storage.Test.Information
         [InlineData(ResourceType.Binary)]
         [InlineData(ResourceType.Document)]
         [InlineData(ResourceType.Video)]
-        public async Task Constructor_WithVariousFileTypes_CreatesValidInstanceAsync(ResourceType resourceType)
+        public void Constructor_WithVariousFileTypes_CreatesValidInstance(ResourceType resourceType)
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                resourceType,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile = TestDirectory.CreateTemplateFile(resourceType);
 
             // Act
             var fileInfo = new FileInformation(testFile.FullPath);
@@ -257,13 +222,10 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task IdentificationReport_AnalysisCompletesAsynchronouslyAsync()
+        public void IdentificationReport_AnalysisCompletesAsynchronously()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Video,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile = TestDirectory.CreateTemplateFile(ResourceType.Video);
 
             // Act
             var fileInfo = new FileInformation(testFile.FullPath);
@@ -277,13 +239,10 @@ namespace Rheo.Storage.Test.Information
         }
 
         [Fact]
-        public async Task MimeType_AndActualExtension_AreConsistentAsync()
+        public void MimeType_AndActualExtension_AreConsistent()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTemplateFileAsync(
-                ResourceType.Document,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            using var testFile = TestDirectory.CreateTemplateFile(ResourceType.Document);
 
             // Act
             var fileInfo = new FileInformation(testFile.FullPath);
