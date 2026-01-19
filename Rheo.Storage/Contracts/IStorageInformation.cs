@@ -10,6 +10,11 @@ namespace Rheo.Storage.Contracts
     {
         #region Core Identity
         /// <summary>
+        /// The absolute path to the storage object.
+        /// </summary>
+        string AbsolutePath { get; }
+
+        /// <summary>
         /// The user-friendly name for the storage. This is typically the name shown in file explorer.
         /// </summary>
         string DisplayName { get; }

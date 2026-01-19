@@ -1,4 +1,4 @@
-﻿using Rheo.Storage.Test.Models;
+﻿using Rheo.Storage.Extensions;
 
 namespace Rheo.Storage.Test
 {
@@ -33,8 +33,8 @@ namespace Rheo.Storage.Test
 
         public string? TestName { get; }
 
-        public TestDirectory TestDirectoryParent => _fixture.TestDir;
+        public TempDirectory TestDirectoryParent => _fixture.TestDir;
 
-        public TestDirectory TestDirectory { get; }
+        public TempDirectory TestDirectory { get; }
     }
 }

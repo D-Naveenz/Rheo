@@ -8,15 +8,17 @@
 
     <AssemblyTitle>Rheo storage-handling library for C#</AssemblyTitle>
     <Title>$(AssemblyTitle)</Title>
-    <Description>A modern .NET library for file and directory operations with rich metadata, content-based file analysis, and asynchronous I/O operations.</Description>
+    <Description>Intelligent file system operations with content-based analysis, real-time progress tracking, and built-in change monitoring.</Description>
     <Authors>Naveen Dharmathunga</Authors>
-    <Version>0.6.18-beta.2</Version>
+    <Version>1.0.18</Version>
     <Copyright>Copyright (c) 2025 Naveen Dharmathunga, All rights reserved.</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>definition; extension; types; asynchronous; mime; file-handling; directory-management; magic-numbers; file-analysis; rheo;</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
     <RepositoryUrl>https://github.com/D-Naveenz/rheo-storage</RepositoryUrl>
     <PackageProjectUrl>https://github.com/D-Naveenz/rheo-storage/wiki</PackageProjectUrl>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -43,6 +45,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
     <None Include="..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>

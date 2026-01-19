@@ -1,46 +1,45 @@
 ﻿using System.Diagnostics;
+using Rheo.Storage.Information;
 
-namespace Rheo.Storage.Handling
+namespace Rheo.Storage.Core
 {
-    internal static partial class FileHandling
+    public abstract partial class FileHandler
     {
         /// <summary>
-        /// Asynchronously copies the specified file to a new location, optionally overwriting an existing file and
-        /// reporting progress.
+        /// Copies the current file to the specified destination asynchronously, optionally overwriting an existing file
+        /// and reporting progress.
         /// </summary>
-        /// <remarks>This method uses double-buffered asynchronous I/O to maximize throughput, which can
-        /// significantly improve performance on high-speed storage devices. Progress is reported after each successful
-        /// write operation if a progress reporter is provided. The method acquires an exclusive lock on the source file
-        /// for the duration of the copy to ensure thread safety.</remarks>
-        /// <param name="source">The file to copy. Must not be null and must refer to an existing file.</param>
-        /// <param name="destination">The full path of the destination file. If the file exists and <paramref name="overwrite"/> is <see
-        /// langword="false"/>, the operation will fail.</param>
-        /// <param name="overwrite">A value indicating whether to overwrite the destination file if it already exists. If <see
-        /// langword="false"/>, an exception is thrown if the destination file exists.</param>
-        /// <param name="progress">An optional progress reporter that receives updates about the copy operation, including bytes transferred
-        /// and transfer rate. May be null if progress reporting is not required.</param>
+        /// <remarks>The copy operation is performed asynchronously and is thread-safe. If the source file
+        /// is locked by another process, the method waits until it becomes available. Progress updates are reported if
+        /// a progress reporter is provided.</remarks>
+        /// <param name="destination">The path to the destination file. Must be a valid file path. If the file already exists and <paramref
+        /// name="overwrite"/> is <see langword="false"/>, the operation will fail.</param>
+        /// <param name="overwrite">A value indicating whether to overwrite the destination file if it already exists. Set to <see
+        /// langword="true"/> to overwrite; otherwise, <see langword="false"/>.</param>
+        /// <param name="progress">An optional progress reporter that receives updates about the copy operation. Can be <see langword="null"/>
+        /// if progress reporting is not required.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the copy operation.</param>
-        /// <returns>A task that represents the asynchronous copy operation. The task result contains a <see cref="FileObject"/>
-        /// representing the newly created file at the destination path.</returns>
+        /// <returns>A <see cref="FileInformation"/> object representing the copied file at the destination path.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the copy operation fails due to an I/O error or insufficient permissions.</exception>
-        public static async Task<FileObject> CopyAsync(
-            FileObject source,
+        internal async Task<FileInformation> CopyInternalAsync(
             string destination,
             bool overwrite,
             IProgress<StorageProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
             // INITIALIZATION
-            ProcessDestinationPath(ref destination, source.Name, overwrite);
-            var _lock = source.Semaphore;
-            var bufferSize = source.GetBufferSize();
+            ProcessDestinationPath(ref destination, Name, overwrite);
+            var _lock = Semaphore;
+            var bufferSize = GetBufferSize();
 
             // OPERATION
             await _lock.WaitAsync(cancellationToken);
             try
             {
+                await WaitForFileAvailableAsync(FullPath, cancellationToken: cancellationToken);    // Ensure no other operations are in progress
+
                 using var sourceStream = new FileStream(
-                    source.FullPath,
+                    FullPath,
                     FileMode.Open,
                     FileAccess.Read,
                     FileShare.Read,
@@ -64,42 +63,45 @@ namespace Rheo.Storage.Handling
                 _lock.Release();
             }
 
-            // FINALIZATION
-            return new FileObject(destination);
+            // FINALIZATION - Return file information
+            return new FileInformation(destination);
         }
 
         /// <summary>
-        /// Asynchronously deletes the specified file from the file system and disposes the associated FileObject.
+        /// Deletes the underlying file asynchronously and raises a change event to notify listeners of the deletion.
         /// </summary>
-        /// <remarks>After successful deletion, the FileObject is disposed and should not be used for
-        /// further operations.</remarks>
-        /// <param name="source">The FileObject representing the file to delete. Cannot be null.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the delete operation. The default value is None.</param>
+        /// <remarks>If the file does not exist, the change event is still raised to indicate deletion.
+        /// The operation is thread-safe and will wait for any ongoing file operations to complete before
+        /// deleting.</remarks>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the delete operation.</param>
         /// <returns>A task that represents the asynchronous delete operation.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the file cannot be deleted due to an I/O error or insufficient permissions.</exception>
-        public static async Task DeleteAsync(FileObject source, CancellationToken cancellationToken = default)
+        internal async Task DeleteInternalAsync(CancellationToken cancellationToken = default)
         {
-            var _lock = source.Semaphore;
+            var _lock = Semaphore;
 
             await _lock.WaitAsync(cancellationToken);
             try
             {
-                var path = source.FullPath; // Store path before disposing
+                var path = FullPath; // Store path before raising event
+                await WaitForFileAvailableAsync(path, cancellationToken: cancellationToken);    // Ensure no other operations are in progress
 
-                // Dispose the current FileObject to ensure the stored information are correct
-                source.Dispose();
                 await Task.Run(() =>
                 {
                     File.Delete(path);
                 }, cancellationToken);
+
+                // Raise the Changed event to notify deletion
+                RaiseChanged(StorageChangeType.Deleted, null);
             }
             catch (FileNotFoundException)
             {
-                // File already deleted - consider as successful
+                // File already deleted - still raise the event
+                RaiseChanged(StorageChangeType.Deleted, null);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                throw new InvalidOperationException($"Failed to delete file: {source.FullPath}", ex);
+                throw new InvalidOperationException($"Failed to delete file: {FullPath}", ex);
             }
             finally
             {
@@ -108,45 +110,45 @@ namespace Rheo.Storage.Handling
         }
 
         /// <summary>
-        /// Asynchronously moves the specified file to a new destination, optionally overwriting an existing file.
+        /// Moves the current file to the specified destination path asynchronously, optionally overwriting an existing
+        /// file.
         /// </summary>
         /// <remarks>If the source and destination are on the same volume, the move is performed as a fast
-        /// directory entry update. If they are on different volumes, the file is copied and then the source is deleted.
-        /// The source file is disposed after a successful move. The method is thread-safe with respect to the source
-        /// file. Progress updates are reported only if a progress reporter is provided.</remarks>
-        /// <param name="source">The file to move. Must not be null and must refer to an existing file.</param>
-        /// <param name="destination">The full path to the destination file. Cannot be null or empty.</param>
-        /// <param name="overwrite">true to overwrite the destination file if it exists; otherwise, false.</param>
-        /// <param name="progress">An optional progress reporter that receives updates about the move operation. May be null.</param>
+        /// directory entry update. For cross-volume moves, the file is copied and then deleted from the source
+        /// location. Progress updates are reported if a progress reporter is provided. The operation is thread-safe and
+        /// will wait for any ongoing file operations to complete before proceeding.</remarks>
+        /// <param name="destination">The full path to the destination file. Must be a valid file path and cannot be null or empty.</param>
+        /// <param name="overwrite">A value indicating whether to overwrite the destination file if it already exists. If <see
+        /// langword="true"/>, the destination file will be replaced.</param>
+        /// <param name="progress">An optional progress reporter that receives updates about the move operation, including bytes transferred
+        /// and total bytes.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the move operation.</param>
-        /// <returns>A task that represents the asynchronous move operation. The task result contains a FileObject representing
-        /// the file at the new destination.</returns>
-        /// <exception cref="InvalidOperationException">Thrown if the move operation fails due to an I/O error or insufficient permissions.</exception>
-        public static async Task<FileObject> MoveAsync(
-            FileObject source,
+        /// <returns>A <see cref="FileInformation"/> object representing the file at its new location after the move completes.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the file cannot be moved to the specified destination due to I/O errors or insufficient
+        /// permissions.</exception>
+        internal async Task<FileInformation> MoveInternalAsync(
             string destination,
             bool overwrite,
             IProgress<StorageProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
             // INITIALIZATION
-            ProcessDestinationPath(ref destination, source.Name, overwrite);
-            var _lock = source.Semaphore;
+            ProcessDestinationPath(ref destination, Name, overwrite);
+            var _lock = Semaphore;
 
             // OPERATION
             await _lock.WaitAsync(cancellationToken);
             try
             {
-                if (source.IsInTheSameRoot(destination))
+                await WaitForFileAvailableAsync(FullPath, cancellationToken: cancellationToken);    // Ensure no other operations are in progress
+
+                if (IsInTheSameRoot(destination))
                 {
                     // Same volume move - fast operation (just directory entry update)
                     await Task.Run(() =>
                     {
-                        File.Move(source.FullPath, destination, overwrite);
+                        File.Move(FullPath, destination, overwrite);
                     }, cancellationToken);
-
-                    // Dispose the current FileObject to ensure the stored information are correct
-                    source.Dispose();
 
                     // Send final progress update
                     progress?.Report(new StorageProgress
@@ -156,8 +158,10 @@ namespace Rheo.Storage.Handling
                         BytesPerSecond = 0
                     });
 
-                    // FINALIZATION
-                    return new FileObject(destination);
+                    // FINALIZATION - Create and return new information
+                    var newInfo = new FileInformation(destination);
+                    RaiseChanged(StorageChangeType.Relocated, newInfo);
+                    return newInfo;
                 }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -171,58 +175,69 @@ namespace Rheo.Storage.Handling
 
             // Cross-volume move - release lock before calling nested operations
             // This prevents deadlock since CopyAsync and DeleteAsync acquire the same lock
-            FileObject? copiedFile = null;
+            FileInformation? copiedInfo = null;
             try
             {
-                copiedFile = await CopyAsync(source, destination, overwrite, progress, cancellationToken);
-                await DeleteAsync(source, cancellationToken);
+                copiedInfo = await CopyInternalAsync(destination, overwrite, progress, cancellationToken);
+                await DeleteInternalAsync(cancellationToken);
+
+                // Raise relocation event for the source object
+                RaiseChanged(StorageChangeType.Relocated, copiedInfo);
 
                 // FINALIZATION
-                return copiedFile;
+                return copiedInfo;
             }
             catch
             {
                 // Rollback: Delete the copied file if delete of source failed
-                if (copiedFile != null)
+                if (copiedInfo != null)
                 {
-                    try { await DeleteAsync(copiedFile, cancellationToken); } catch { /* Log but don't throw */ }
+                    try 
+                    { 
+                        var tempObj = new FileObject(copiedInfo.AbsolutePath);
+                        await tempObj.DeleteInternalAsync(cancellationToken); 
+                    } 
+                    catch { /* Log but don't throw */ }
                 }
                 throw;
             }
         }
 
         /// <summary>
-        /// Renames the specified file asynchronously to the given new name and returns a new FileObject representing
-        /// the renamed file.
+        /// Renames the current file to the specified new name asynchronously within its parent directory.
         /// </summary>
-        /// <remarks>The source FileObject is disposed after the rename operation to ensure that its
-        /// information is no longer used. The operation is thread-safe and will wait for any ongoing operations on the
-        /// source file to complete before renaming.</remarks>
-        /// <param name="source">The FileObject representing the file to be renamed. Must not be null.</param>
+        /// <remarks>This method acquires an exclusive lock on the file during the rename operation to
+        /// prevent concurrent access. The file is moved within its current parent directory. If the operation is
+        /// canceled via the provided token, the file remains unchanged.</remarks>
         /// <param name="newName">The new name for the file. Must be a valid file name and cannot be null or empty.</param>
-        /// <param name="cancellationToken">A CancellationToken that can be used to cancel the rename operation.</param>
-        /// <returns>A FileObject representing the file after it has been renamed.</returns>
-        /// <exception cref="ArgumentException">Thrown if the new name is null, empty, or contains invalid characters.</exception>
-        /// <exception cref="InvalidOperationException">Thrown if the file cannot be renamed due to an I/O error or insufficient permissions.</exception>
-        public static async Task<FileObject> RenameAsync(
-            FileObject source,
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the rename operation.</param>
+        /// <returns>A <see cref="FileInformation"/> instance representing the file after it has been renamed.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the file cannot be renamed due to I/O errors or insufficient permissions.</exception>
+        internal async Task<FileInformation> RenameInternalAsync(
             string newName,
             CancellationToken cancellationToken = default)
         {
             // INITIALIZATION
             ThrowIfInvalidFileName(newName);
-            var destination = source.ParentDirectory;
+            var destination = ParentDirectory;
             ProcessDestinationPath(ref destination, newName, false);
-            var _lock = source.Semaphore;
+            var _lock = Semaphore;
 
             // OPERATION
             await _lock.WaitAsync(cancellationToken);
             try
             {
+                await WaitForFileAvailableAsync(FullPath, cancellationToken: cancellationToken);    // Ensure no other operations are in progress
+
                 await Task.Run(() =>
                 {
-                    File.Move(source.FullPath, destination, false);
+                    File.Move(FullPath, destination, false);
                 }, cancellationToken);
+
+                // FINALIZATION - Create new information and raise event
+                var newInfo = new FileInformation(destination);
+                RaiseChanged(StorageChangeType.Relocated, newInfo);
+                return newInfo;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -232,39 +247,29 @@ namespace Rheo.Storage.Handling
             {
                 _lock.Release();
             }
-
-            // FINALIZATION
-            return new FileObject(destination);
         }
 
         /// <summary>
-        /// Asynchronously writes the contents of a stream to the specified file, optionally overwriting existing
-        /// content and reporting progress.
+        /// Asynchronously writes the contents of the specified stream to the target file, replacing any existing data.
         /// </summary>
-        /// <remarks>This method acquires an exclusive lock on the file for the duration of the write operation
-        /// to ensure thread safety. The source stream is read from its current position (after seeking to the
-        /// beginning). The FileObject is disposed after writing and a new instance is returned with updated metadata.</remarks>
-        /// <param name="source">The FileObject representing the destination file. Must not be null.</param>
-        /// <param name="sourceStream">The stream containing data to write. Must support reading and have a known length. The stream is not
-        /// disposed by this method.</param>
-        /// <param name="overwrite">A value indicating whether to overwrite the file if it already exists. If <see langword="false"/> and
-        /// the file exists, an exception is thrown.</param>
-        /// <param name="progress">An optional progress reporter that receives updates about the write operation. May be null.</param>
+        /// <remarks>This method acquires an internal lock to ensure thread safety during the write
+        /// operation. The file is overwritten with the contents of the provided stream. Progress updates are reported
+        /// if a progress reporter is supplied.</remarks>
+        /// <param name="sourceStream">The stream containing the data to be written to the file. The stream must be readable and positioned at the
+        /// beginning.</param>
+        /// <param name="progress">An optional progress reporter that receives updates about the number of bytes written during the operation.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the write operation.</param>
-        /// <returns>A task that represents the asynchronous write operation. The task result contains a new FileObject
-        /// representing the updated file.</returns>
+        /// <returns>A FileInformation object representing the file after the write operation has completed.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the write operation fails due to an I/O error or insufficient permissions.</exception>
-        public static async Task<FileObject> WriteAsync(
-            FileObject source,
+        internal async Task<FileInformation> WriteInternalAsync(
             Stream sourceStream,
-            bool overwrite = false,
             IProgress<StorageProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
             // INITIALIZATION
-            var _lock = source.Semaphore;
-            var bufferSize = source.GetBufferSize();
-            var destination = source.FullPath;
+            var _lock = Semaphore;
+            var bufferSize = GetBufferSize();
+            var destination = FullPath;
 
             // OPERATION
             await _lock.WaitAsync(cancellationToken);
@@ -276,10 +281,15 @@ namespace Rheo.Storage.Handling
                 await CopyStreamToFileAsync(
                     sourceStream,
                     destination,
-                    overwrite,
+                    true,
                     bufferSize,
                     progress,
                     cancellationToken);
+
+                // FINALIZATION - Create new information and raise event
+                var newInfo = new FileInformation(destination);
+                RaiseChanged(StorageChangeType.Modified, newInfo);
+                return newInfo;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -289,9 +299,6 @@ namespace Rheo.Storage.Handling
             {
                 _lock.Release();
             }
-
-            // FINALIZATION
-            return new FileObject(destination);
         }
 
         /// <summary>
@@ -314,6 +321,12 @@ namespace Rheo.Storage.Handling
             IProgress<StorageProgress>? progress,
             CancellationToken cancellationToken)
         {
+            if (overwrite && File.Exists(destinationPath))
+            {
+                // Ensure no other operations are in progress
+                await WaitForFileAvailableAsync(destinationPath, cancellationToken: cancellationToken);
+            }
+
             using var destStream = new FileStream(
                 destinationPath,
                 overwrite ? FileMode.Create : FileMode.CreateNew,

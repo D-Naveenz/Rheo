@@ -2,8 +2,8 @@ using Rheo.Storage.Information;
 
 namespace Rheo.Storage.Test.Information
 {
-    [Trait(TestTraits.Feature, "DirectoryInformation")]
-    [Trait(TestTraits.Category, "Edge Case Tests")]
+    [Feature("DirectoryInformation")]
+    [Category("Edge Case Tests")]
     public class DirectoryInformationEdgeCaseTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
     {
         [Fact]

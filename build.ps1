@@ -6,6 +6,7 @@
 .DESCRIPTION
     This script replicates the nuget-publish-storage.yml workflow locally for easier debugging.
     It builds the solution, runs tests, packs the NuGet package, and can optionally publish it.
+    Loads environment variables from .env file if present.
 
 .PARAMETER Configuration
     Build configuration (default: Release)
@@ -16,12 +17,6 @@
 .PARAMETER Publish
     Publish the package to NuGet.org after packing
 
-.PARAMETER ApiKey
-    NuGet API key for publishing (can be provided directly or via file)
-
-.PARAMETER ApiKeyFile
-    Path to file containing NuGet API key (default: nuget-api-key.secret.txt)
-
 .PARAMETER OutputPath
     Output path for NuGet packages (default: ./nupkg)
 
@@ -29,8 +24,6 @@
     .\build.ps1
     .\build.ps1 -Configuration Debug -SkipTests
     .\build.ps1 -Publish
-    .\build.ps1 -Publish -ApiKeyFile 'path/to/key.txt'
-    .\build.ps1 -Publish -ApiKey 'your-api-key-here'
 #>
 
 [CmdletBinding()]
@@ -46,12 +39,6 @@ param(
     [switch]$Publish,
 
     [Parameter()]
-    [string]$ApiKey,
-
-    [Parameter()]
-    [string]$ApiKeyFile = 'nuget-api-key.secret.txt',
-
-    [Parameter()]
     [string]$OutputPath = './nupkg'
 )
 
@@ -60,6 +47,17 @@ $ErrorActionPreference = 'Stop'
 
 # Script location
 $ScriptRoot = $PSScriptRoot
+
+# Load environment variables from .env file if it exists
+$DotEnvPath = Join-Path $ScriptRoot '.env'
+if (Test-Path $DotEnvPath) {
+    $DotEnvLoaderPath = Join-Path $ScriptRoot 'DotEnvLoader.psm1'
+    if (Test-Path $DotEnvLoaderPath) {
+        Import-Module $DotEnvLoaderPath -Force
+        Import-DotEnv -Path $DotEnvPath
+        Write-Host "Loaded environment variables from .env" -ForegroundColor Green
+    }
+}
 
 # Project paths
 $StorageProject = Join-Path $ScriptRoot 'Rheo.Storage\Rheo.Storage.csproj'
@@ -237,36 +235,15 @@ if ($Publish) {
     Write-Host "=====================================" -ForegroundColor Cyan
     Write-Host ""
 
-    # Get API key from parameter or file
-    $ResolvedApiKey = $null
-    
-    if (-not [string]::IsNullOrWhiteSpace($ApiKey)) {
-        # Use API key provided as argument
-        $ResolvedApiKey = $ApiKey.Trim()
-        Write-Host "Using API key from command-line argument" -ForegroundColor Cyan
-    } else {
-        # Read API key from file
-        $ApiKeyPath = if ([System.IO.Path]::IsPathRooted($ApiKeyFile)) {
-            $ApiKeyFile
-        } else {
-            Join-Path $ScriptRoot $ApiKeyFile
-        }
-
-        if (-not (Test-Path $ApiKeyPath)) {
-            throw "API key not provided and file not found: $ApiKeyPath"
-        }
-
-        $ResolvedApiKey = Get-Content -Path $ApiKeyPath -Raw | ForEach-Object { $_.Trim() }
-        if ([string]::IsNullOrWhiteSpace($ResolvedApiKey)) {
-            throw "API key file is empty: $ApiKeyPath"
-        }
-        Write-Host "Using API key from file: $ApiKeyPath" -ForegroundColor Cyan
+    # Check for NUGET_API_KEY environment variable
+    if ([string]::IsNullOrWhiteSpace($env:NUGET_API_KEY)) {
+        throw "NUGET_API_KEY environment variable not set. Please set it in .env file or environment."
     }
 
+    Write-Host "Using NuGet API key from environment variable NUGET_API_KEY" -ForegroundColor Cyan
     Write-Host "Publishing $($PackageFile.Name)..." -ForegroundColor Yellow
+    
     try {
-        # Use environment variable instead of passing API key on the command line
-        $env:NUGET_API_KEY = $ResolvedApiKey
         dotnet nuget push $PackageFile.FullName --source https://api.nuget.org/v3/index.json --api-key $env:NUGET_API_KEY --skip-duplicate
         if ($LASTEXITCODE -ne 0) {
             throw "dotnet nuget push failed with exit code $LASTEXITCODE"
@@ -274,9 +251,6 @@ if ($Publish) {
         Write-Host "✓ Package published successfully" -ForegroundColor Green
     } catch {
         throw "Failed to publish package: $_"
-    } finally {
-        # Clear the API key from environment
-        Remove-Item Env:\NUGET_API_KEY -ErrorAction SilentlyContinue
     }
 
     Write-Host ""

@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-namespace Rheo.Storage.COM
+namespace Rheo.Storage.Interop
 {
     [SupportedOSPlatform("linux")]
     internal static partial class Linux

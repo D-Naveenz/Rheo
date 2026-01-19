@@ -1,7 +1,7 @@
 ﻿using Rheo.Storage.Contracts;
 using System.Runtime.Versioning;
 
-namespace Rheo.Storage.COM
+namespace Rheo.Storage.Interop
 {
     internal static class Platform
     {

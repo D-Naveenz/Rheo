@@ -1,10 +1,10 @@
 using Rheo.Storage.Information;
-using Rheo.Storage.Test.Utilities;
+using Rheo.Storage.Test.Extensions;
 
 namespace Rheo.Storage.Test.Information
 {
-    [Trait(TestTraits.Feature, "FileInformation")]
-    [Trait(TestTraits.Category, "Edge Case Tests")]
+    [Feature("FileInformation")]
+    [Category("Edge Case Tests")]
     public class FileInformationEdgeCaseTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
     {
         [Fact]

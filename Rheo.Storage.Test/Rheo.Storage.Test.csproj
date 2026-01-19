@@ -9,7 +9,7 @@
     <AssemblyTitle>Rheo.Storage Test Suite</AssemblyTitle>
     <Product>Rheo.Storage</Product>
     <Authors>Naveen Dharmathunga</Authors>
-    <Version>0.6.18</Version>
+    <Version>1.0.18</Version>
     <Copyright>Copyright (c) 2025 Naveen Dharmathunga, All rights reserved.</Copyright>
   </PropertyGroup>
 

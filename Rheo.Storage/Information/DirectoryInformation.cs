@@ -1,19 +1,21 @@
-﻿using Rheo.Storage.Contracts;
+﻿using System.ComponentModel;
 using System.Security;
 
 namespace Rheo.Storage.Information
 {
     /// <summary>
-    /// Provides information about a directory, including file and subdirectory counts and total size, for a specified
-    /// absolute directory path.
+    /// Provides read-only information about a directory, including its size, file count, and subdirectory count. This
+    /// class represents metadata for a specific directory on the file system.
     /// </summary>
-    /// <remarks>Use this class to retrieve aggregate information about a directory and its contents, such as
-    /// the number of files, number of subdirectories, and the total size of all files within the directory tree. If the
-    /// application lacks sufficient permissions to access parts of the directory, some properties may return fallback
-    /// values (such as -1 or 0) to indicate that the operation could not be completed.</remarks>
+    /// <remarks>DirectoryInformation is immutable and retrieves information recursively for the specified
+    /// directory and all its subdirectories. If the application lacks sufficient permissions to access parts of the
+    /// directory tree, some properties may return fallback values (such as -1 for counts or 0 for size). This class is
+    /// thread-safe for concurrent read operations.</remarks>
+    [ImmutableObject(true)]
     public sealed class DirectoryInformation : StorageInformation, IEquatable<DirectoryInformation>
     {
         private readonly DirectoryInfo _systemDirInfo;
+        private readonly long _size;
 
         /// <summary>
         /// Initializes a new instance of the DirectoryInformation class for the specified absolute directory path.
@@ -30,7 +32,7 @@ namespace Rheo.Storage.Information
             }
 
             _systemDirInfo = new(absolutePath);
-            Size = CalculateDirectorySize(_systemDirInfo);
+            _size = CalculateDirectorySize(_systemDirInfo);
         }
 
         #region Properties: Counts
@@ -80,7 +82,7 @@ namespace Rheo.Storage.Information
 
         #region Properties: Size
         /// <inheritdoc/>
-        public override long Size { get; }
+        public override long Size => _size;
 
         #endregion
 
@@ -95,7 +97,7 @@ namespace Rheo.Storage.Information
         {
             if (other is null)
                 return false;
-            return string.Equals(_absPath, other._absPath, StringComparison.OrdinalIgnoreCase) &&
+            return string.Equals(AbsolutePath, other.AbsolutePath, StringComparison.OrdinalIgnoreCase) &&
                    NoOfFiles == other.NoOfFiles &&
                    NoOfDirectories == other.NoOfDirectories;
         }
@@ -109,7 +111,7 @@ namespace Rheo.Storage.Information
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            return HashCode.Combine(_absPath.ToLowerInvariant(), NoOfFiles, NoOfDirectories);
+            return HashCode.Combine(AbsolutePath.ToLowerInvariant(), NoOfFiles, NoOfDirectories);
         }
 
         /// <inheritdoc/>

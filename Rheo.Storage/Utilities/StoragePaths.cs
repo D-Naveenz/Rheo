@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace Rheo.Storage;
+namespace Rheo.Storage.Utilities;
 
 internal static class StoragePaths
 {

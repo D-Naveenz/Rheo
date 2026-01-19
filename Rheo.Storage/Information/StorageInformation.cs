@@ -1,4 +1,4 @@
-﻿using Rheo.Storage.COM;
+﻿using Rheo.Storage.Interop;
 using Rheo.Storage.Contracts;
 using System.Drawing;
 
@@ -17,13 +17,6 @@ namespace Rheo.Storage.Information
     {
         private readonly TaskCompletionSource<IStorageInfoStruct> _storageInfoTaskAwaiter;
 
-        /// <summary>
-        /// Represents the absolute path associated with the current instance.
-        /// </summary>
-        /// <remarks>This field is intended for use by derived classes that require access to the absolute
-        /// path value. The value should be a fully qualified path and may be used for file system operations or
-        /// resource identification.</remarks>
-        protected readonly string _absPath;
         /// <summary>
         /// Lazily retrieves the platform-specific storage information structure for the current storage item.
         /// </summary>
@@ -46,7 +39,7 @@ namespace Rheo.Storage.Information
                 throw new ArgumentException("The file path cannot be null or whitespace.", nameof(absolutePath));
             }
 
-            _absPath = absolutePath;
+            AbsolutePath = absolutePath;
 
             // Initialize the storage info task completion source
             _storageInfoTaskAwaiter = new TaskCompletionSource<IStorageInfoStruct>();
@@ -68,6 +61,9 @@ namespace Rheo.Storage.Information
 
         #region Properties: Core Identity
         /// <inheritdoc/>
+        public string AbsolutePath { get; }
+
+        /// <inheritdoc/>
         public string DisplayName
         {
             get
@@ -77,7 +73,7 @@ namespace Rheo.Storage.Information
                     return winfo.DisplayName;
                 }
 
-                return Path.GetFileNameWithoutExtension(_absPath);
+                return Path.GetFileNameWithoutExtension(AbsolutePath);
             }
         }
 

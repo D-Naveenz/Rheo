@@ -1,15 +1,15 @@
-﻿using Rheo.Storage.Test.Models;
+﻿using Rheo.Storage.Extensions;
 using System.Diagnostics;
 
 namespace Rheo.Storage.Test
 {
     public class TestDirectoryFixture : IDisposable
     {
-        public TestDirectory TestDir { get; }
+        public TempDirectory TestDir { get; }
 
         public TestDirectoryFixture()
         {
-            TestDir = TestDirectory.Create();
+            TestDir = TempDirectory.Create();
 
 #if DEBUG
             // Only open the folder when actively debugging (not just running tests)

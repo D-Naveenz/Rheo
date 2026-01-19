@@ -1,29 +1,29 @@
 ﻿using Rheo.Storage.Analyzing;
 using Rheo.Storage.Analyzing.Models.Result;
-using Rheo.Storage.Contracts;
+using System.ComponentModel;
 
 namespace Rheo.Storage.Information
 {
     /// <summary>
-    /// Provides detailed information about a file, including its type, MIME type, extension, and analysis results,
-    /// based on both file metadata and content analysis.
+    /// Provides detailed information and analysis results for a specific file, including type, MIME type, extension,
+    /// and content-based identification. This class enables inspection of file properties and content-derived metadata
+    /// in a read-only, immutable manner.
     /// </summary>
-    /// <remarks>Use this class to access file-specific information and analysis results, such as the detected
-    /// file type, MIME type, and extensions. FileInformation performs content-based analysis in addition to using file
-    /// metadata, which can provide more accurate identification than relying on file name or extension alone. This
-    /// class is typically used when you need to determine the true nature of a file, regardless of its name or
-    /// extension.</remarks>
+    /// <remarks>FileInformation defers file content analysis until identification results are first accessed,
+    /// which helps avoid file locks during object construction. Instances are immutable and thread-safe. Use this class
+    /// to obtain both file system and content-based metadata for a file, such as its detected type, MIME type, and
+    /// actual extension. Inherits from StorageInformation and implements value equality based on file path, size, and
+    /// identification results.</remarks>
+    [ImmutableObject(true)]
     public sealed class FileInformation : StorageInformation, IEquatable<FileInformation>
     {
-        private readonly TaskCompletionSource<AnalysisResult> _analysisTaskAwaiter;
         private readonly Lazy<AnalysisResult> _identificationReportLazy;
 
         /// <summary>
-        /// Initializes a new instance of the FileInformation class for the specified file path and begins asynchronous
-        /// analysis of the file.
+        /// Initializes a new instance of the FileInformation class for the specified file path.
         /// </summary>
-        /// <remarks>The file analysis is started in the background upon construction. Accessing analysis
-        /// results may block until the analysis is complete.</remarks>
+        /// <remarks>The file analysis is deferred until analysis results are first accessed, 
+        /// preventing file locks during object construction.</remarks>
         /// <param name="absolutePath">The absolute path to the file to be analyzed. The file must exist at the specified location.</param>
         /// <exception cref="FileNotFoundException">Thrown if the file specified by absolutePath does not exist.</exception>
         public FileInformation(string absolutePath) : base(absolutePath)
@@ -34,24 +34,8 @@ namespace Rheo.Storage.Information
                 throw new FileNotFoundException("The specified file does not exist.", absolutePath);
             }
 
-            // Initialize the task completion source
-            _analysisTaskAwaiter = new TaskCompletionSource<AnalysisResult>();
-            
-            // Start the analysis in a background task
-            Task.Run(() =>
-            {
-                try
-                {
-                    var report = FileAnalyzer.AnalyzeFile(absolutePath);
-                    _analysisTaskAwaiter.SetResult(report);
-                }
-                catch (Exception ex)
-                {
-                    _analysisTaskAwaiter.SetException(ex);
-                }
-            });
-            
-            _identificationReportLazy = new Lazy<AnalysisResult>(() => _analysisTaskAwaiter.Task.GetAwaiter().GetResult());
+            // Defer analysis until first access to avoid file locks during construction
+            _identificationReportLazy = new Lazy<AnalysisResult>(() => FileAnalyzer.AnalyzeFile(absolutePath));
         }
 
         #region Properties: Core Identity
@@ -99,7 +83,7 @@ namespace Rheo.Storage.Information
         /// <summary>
         /// The file extension (including the dot), if available, as determined by the file name or path.
         /// </summary>
-        public string? Extension => Path.GetExtension(_absPath);
+        public string? Extension => Path.GetExtension(AbsolutePath);
 
         /// <summary>
         /// The actual extension determined by file content analysis.
@@ -124,7 +108,7 @@ namespace Rheo.Storage.Information
             {
                 return false;
             }
-            return string.Equals(_absPath, other._absPath, StringComparison.OrdinalIgnoreCase) &&
+            return string.Equals(AbsolutePath, other.AbsolutePath, StringComparison.OrdinalIgnoreCase) &&
                    Size == other.Size &&
                    ActualExtension == other.ActualExtension &&
                    MimeType.Equals(other.MimeType);
@@ -139,7 +123,7 @@ namespace Rheo.Storage.Information
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            return HashCode.Combine(_absPath.ToLowerInvariant(), Size, ActualExtension, MimeType);
+            return HashCode.Combine(AbsolutePath.ToLowerInvariant(), Size, ActualExtension, MimeType);
         }
 
         /// <inheritdoc/>

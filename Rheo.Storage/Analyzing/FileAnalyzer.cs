@@ -9,7 +9,7 @@ namespace Rheo.Storage.Analyzing
     /// </summary>
     /// <remarks>This class is intended for internal use and is not thread-safe. All methods are static and do
     /// not maintain any internal state between calls.</remarks>
-    public static class FileAnalyzer
+    internal static class FileAnalyzer
     {
         private const int SCAN_WINDOW_SIZE = 8192; // 8KB scan window
 
@@ -115,7 +115,8 @@ namespace Rheo.Storage.Analyzing
             int size = (int)Math.Min(fileLength, maxSize);
             byte[] buffer = new byte[size];
 
-            using var fileStream = fileInfo.OpenRead();
+            // Open with FileShare.ReadWrite | FileShare.Delete to allow file operations while analyzing
+            using var fileStream = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             fileStream.ReadExactly(buffer, 0, size);
             
             // Trim trailing null bytes to avoid false pattern matches
@@ -249,7 +250,10 @@ namespace Rheo.Storage.Analyzing
             // Score strings if enabled
             if (checkStrings && points > 0 && definition.Signature.Strings.Count > 0)
             {
-                byte[] fileBuffer = File.ReadAllBytes(filePath);
+                // Open with FileShare.ReadWrite | FileShare.Delete to allow file operations while analyzing
+                using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                byte[] fileBuffer = new byte[fs.Length];
+                fs.ReadExactly(fileBuffer, 0, fileBuffer.Length);
                 
                 foreach (var stringBytes in definition.Signature.Strings)
                 {

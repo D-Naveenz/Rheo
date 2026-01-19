@@ -1,10 +1,9 @@
-using Rheo.Storage.Test.Models;
-using Rheo.Storage.Test.Utilities;
+﻿using Rheo.Storage.Test.Extensions;
 
 namespace Rheo.Storage.Test.Handling;
 
-[Trait(TestTraits.Feature, "DirectoryObject")]
-[Trait(TestTraits.Category, "Edge Case Tests")]
+[Feature("DirectoryObject")]
+[Category("Edge Case Tests")]
 public class DirectoryObjectEdgeCaseTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
 {
     [Fact]
@@ -23,13 +22,13 @@ public class DirectoryObjectEdgeCaseTests(ITestOutputHelper output, TestDirector
     }
 
     [Fact]
-    public async Task Copy_DeepHierarchy_PreservesStructure()
+    public void Copy_DeepHierarchy_PreservesStructure()
     {
         // Arrange
         var level1 = TestDirectory.CreateSubdirectory("level1");
         var level2 = level1.CreateSubdirectory("level2");
         var level3 = level2.CreateSubdirectory("level3");
-        await level3.CreateTestFileAsync(ResourceType.Text, cancellationToken: TestContext.Current.CancellationToken);
+        level3.CreateTemplateFile(ResourceType.Text);
 
         var destParent = TestDirectory.CreateSubdirectory("deep_dest");
 
@@ -62,13 +61,16 @@ public class DirectoryObjectEdgeCaseTests(ITestOutputHelper output, TestDirector
     {
         // Arrange
         var sourceDir = TestDirectory.CreateSubdirectory();
+        var originalPath = sourceDir.FullPath;
         var newPath = Path.Combine(TestDirectory.FullPath, "new", "nested", "path");
 
         // Act
-        using var movedDir = sourceDir.Move(newPath, overwrite: false);
+        sourceDir.Move(newPath, overwrite: false);
 
         // Assert
-        Assert.True(Directory.Exists(movedDir.ParentDirectory));
+        Assert.False(Directory.Exists(originalPath));
+        Assert.True(Directory.Exists(sourceDir.ParentDirectory));
+        Assert.Contains("nested", sourceDir.FullPath);
     }
 
     [Fact]
@@ -79,7 +81,7 @@ public class DirectoryObjectEdgeCaseTests(ITestOutputHelper output, TestDirector
         // Create multiple large files to ensure operation takes time
         for (int i = 0; i < 5; i++)
         {
-            await sourceDir.CreateTestFileAsync(ResourceType.Video, cancellationToken: TestContext.Current.CancellationToken);
+            await sourceDir.CreateTemplateFileAsync(ResourceType.Video, cancellationToken: TestContext.Current.CancellationToken); // ✅ Kept async for async test
         }
 
         var destParent = TestDirectory.CreateSubdirectory("cancel_dest");
@@ -94,6 +96,8 @@ public class DirectoryObjectEdgeCaseTests(ITestOutputHelper output, TestDirector
             {
                 // First progress report means copy has started
                 copyStarted.TrySetResult(true);
+                // Cancel immediately to ensure we catch it mid-operation
+                cts.Cancel();
             }
         });
 
@@ -103,15 +107,9 @@ public class DirectoryObjectEdgeCaseTests(ITestOutputHelper output, TestDirector
         // Wait for copy to actually start (with timeout)
         var started = await Task.WhenAny(copyStarted.Task, Task.Delay(2000, TestContext.Current.CancellationToken)) == copyStarted.Task;
         
-        if (started)
+        if (!started)
         {
-            // Cancel after copy has started but before it completes
-            await Task.Delay(10, TestContext.Current.CancellationToken); // Let it do a bit more work
-            cts.Cancel();
-        }
-        else
-        {
-            // Fallback: cancel after a short delay if progress never reported
+            // If progress never reported, cancel anyway
             cts.Cancel();
         }
 
@@ -152,10 +150,10 @@ public class DirectoryObjectEdgeCaseTests(ITestOutputHelper output, TestDirector
     }
 
     [Fact]
-    public async Task Delete_WithReadOnlyFile_ThrowsInvalidOperationException()
+    public void Delete_WithReadOnlyFile_ThrowsInvalidOperationException()
     {
         // Arrange
-        var testFile = await TestDirectory.CreateTestFileAsync(ResourceType.Text, cancellationToken: TestContext.Current.CancellationToken);
+        var testFile = TestDirectory.CreateTemplateFile(ResourceType.Text);
 
         // Make file read-only
         var fileInfo = new FileInfo(testFile.FullPath)
@@ -180,32 +178,34 @@ public class DirectoryObjectEdgeCaseTests(ITestOutputHelper output, TestDirector
     {
         // Arrange
         var longName = new string('a', 100); // Long but valid name
+        var originalPath = TestDirectory.FullPath;
 
         // Act
         TestDirectory.Rename(longName);
 
         // Assert
+        Assert.False(Directory.Exists(originalPath));
         Assert.Equal(longName, TestDirectory.Name);
         Assert.True(Directory.Exists(TestDirectory.FullPath));
     }
 
     [Fact]
-    public async Task Move_WithOverwrite_ReplacesDestination()
+    public void Move_WithOverwrite_ReplacesDestination()
     {
         // Arrange
         var sourceDir = TestDirectory.CreateSubdirectory("move_overwrite_source");
-        await sourceDir.CreateTestFileAsync(ResourceType.Text, cancellationToken: TestContext.Current.CancellationToken);
+        sourceDir.CreateTemplateFile(ResourceType.Text);
 
         var destParent = TestDirectory.CreateSubdirectory("move_overwrite_parent");
         var existingDir = destParent.CreateSubdirectory(sourceDir.Name);
-        await existingDir.CreateTestFileAsync(ResourceType.Binary, cancellationToken: TestContext.Current.CancellationToken);
+        existingDir.CreateTemplateFile(ResourceType.Binary);
 
         // Act
-        using var movedDir = sourceDir.Move(destParent.FullPath, overwrite: true);
+        sourceDir.Move(destParent.FullPath, overwrite: true);
 
         // Assert
-        Assert.True(Directory.Exists(movedDir.FullPath));
+        Assert.True(Directory.Exists(sourceDir.FullPath));
         // Should only have files from source
-        Assert.Single(movedDir.GetFiles());
+        Assert.Single(sourceDir.GetFiles());
     }
 }

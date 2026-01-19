@@ -1,11 +1,10 @@
 using Rheo.Storage.Analyzing;
-using Rheo.Storage.Test.Models;
-using Rheo.Storage.Test.Utilities;
+using Rheo.Storage.Test.Extensions;
 
 namespace Rheo.Storage.Test.Analyzing
 {
-    [Trait(TestTraits.Feature, "FileAnalyzer")]
-    [Trait(TestTraits.Category, "Default Tests")]
+    [Feature("FileAnalyzer")]
+    [Category("Default Tests")]
     public class FileAnalyzerTests(ITestOutputHelper output, TestDirectoryFixture fixture) : SafeStorageTestClass(output, fixture)
     {
         [Fact]
@@ -36,13 +35,10 @@ namespace Rheo.Storage.Test.Analyzing
         }
 
         [Fact]
-        public async Task AnalyzeFile_WithTextFile_ReturnsResults()
+        public void AnalyzeFile_WithTextFile_ReturnsResults()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTestFileAsync(
-                ResourceType.Text, 
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            var testFile = TestDirectory.CreateTemplateFile(ResourceType.Text);
 
             // Act
             var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
@@ -57,13 +53,10 @@ namespace Rheo.Storage.Test.Analyzing
         }
 
         [Fact]
-        public async Task AnalyzeFile_WithPngImage_ReturnsResultsAsync()
+        public void AnalyzeFile_WithPngImage_ReturnsResults()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTestFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            var testFile = TestDirectory.CreateTemplateFile(ResourceType.Image);
 
             // Act
             var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
@@ -80,13 +73,10 @@ namespace Rheo.Storage.Test.Analyzing
         }
 
         [Fact]
-        public async Task AnalyzeFile_WithDocument_ReturnsResultsAsync()
+        public void AnalyzeFile_WithDocument_ReturnsResults()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTestFileAsync(
-                ResourceType.Document,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            var testFile = TestDirectory.CreateTemplateFile(ResourceType.Document);
 
             // Act
             var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
@@ -100,13 +90,10 @@ namespace Rheo.Storage.Test.Analyzing
         }
 
         [Fact]
-        public async Task AnalyzeFile_WithVideo_ReturnsResultsAsync()
+        public void AnalyzeFile_WithVideo_ReturnsResultsAsync()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTestFileAsync(
-                ResourceType.Video,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            var testFile = TestDirectory.CreateTemplateFile(ResourceType.Video);
 
             // Act
             var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
@@ -120,13 +107,10 @@ namespace Rheo.Storage.Test.Analyzing
         }
 
         [Fact]
-        public async Task AnalyzeFile_ResultsAreOrderedByPointsAsync()
+        public void AnalyzeFile_ResultsAreOrderedByPointsAsync()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTestFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            var testFile = TestDirectory.CreateTemplateFile(ResourceType.Image);
 
             // Act
             var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
@@ -144,13 +128,10 @@ namespace Rheo.Storage.Test.Analyzing
         }
 
         [Fact]
-        public async Task AnalyzeFile_ConfidencesSumTo100PercentAsync()
+        public void AnalyzeFile_ConfidencesSumTo100Percent()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTestFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            var testFile = TestDirectory.CreateTemplateFile(ResourceType.Image);
 
             // Act
             var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
@@ -166,13 +147,10 @@ namespace Rheo.Storage.Test.Analyzing
         }
 
         [Fact]
-        public async Task AnalyzeFile_WithCheckStringsFalse_StillReturnsResultsAsync()
+        public void AnalyzeFile_WithCheckStringsFalse_StillReturnsResults()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTestFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            var testFile = TestDirectory.CreateTemplateFile(ResourceType.Image);
 
             // Act
             var result = FileAnalyzer.AnalyzeFile(testFile.FullPath, checkStrings: false);
@@ -235,13 +213,10 @@ namespace Rheo.Storage.Test.Analyzing
         [InlineData(ResourceType.Binary)]
         [InlineData(ResourceType.Document)]
         [InlineData(ResourceType.Video)]
-        public async Task AnalyzeFile_WithVariousResourceTypes_ReturnsValidResultsAsync(ResourceType resourceType)
+        public void AnalyzeFile_WithVariousResourceTypes_ReturnsValidResults(ResourceType resourceType)
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTestFileAsync(
-                resourceType,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            var testFile = TestDirectory.CreateTemplateFile(resourceType);
 
             // Act
             var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);
@@ -262,13 +237,10 @@ namespace Rheo.Storage.Test.Analyzing
         }
 
         [Fact]
-        public async Task AnalyzeFile_TopResultHasHighestConfidenceAsync()
+        public void AnalyzeFile_TopResultHasHighestConfidence()
         {
             // Arrange
-            var testFile = await TestDirectory.CreateTestFileAsync(
-                ResourceType.Image,
-                cancellationToken: TestContext.Current.CancellationToken
-                );
+            var testFile = TestDirectory.CreateTemplateFile(ResourceType.Image);
 
             // Act
             var result = FileAnalyzer.AnalyzeFile(testFile.FullPath);

@@ -5,12 +5,12 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-namespace Rheo.Storage.COM
+namespace Rheo.Storage.Interop
 {
     [SupportedOSPlatform("windows")]
     internal static partial class Win32
     {
-        #region Windows COM Types
+        #region Windows Native Types
         // Flags for SHGetFileInfo - can be combined with bitwise OR
         [Flags]
         private enum SHGFI : uint
@@ -89,17 +89,18 @@ namespace Rheo.Storage.COM
 
         #endregion
 
-        private const uint GENERIC_READ = 0x80000000;
-        private const uint FILE_SHARE_READ = 0x00000001;
-        private const uint FILE_SHARE_WRITE = 0x00000002;
-        private const uint FILE_SHARE_DELETE = 0x00000004;
-        private const uint OPEN_EXISTING = 3;
-        private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
-        private const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
-        private const uint SE_FILE_OBJECT = 1;
-        private const uint OWNER_SECURITY_INFORMATION = 0x00000001;
-        private const uint IO_REPARSE_TAG_SYMLINK = 0xA000000C;
-        private const uint FSCTL_GET_REPARSE_POINT = 0x000900A8;
+        public const uint GENERIC_READ = 0x80000000;
+        public const uint GENERIC_WRITE = 0x40000000;
+        public const uint FILE_SHARE_READ = 0x00000001;
+        public const uint FILE_SHARE_WRITE = 0x00000002;
+        public const uint FILE_SHARE_DELETE = 0x00000004;
+        public const uint OPEN_EXISTING = 3;
+        public const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
+        public const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
+        public const uint SE_FILE_OBJECT = 1;
+        public const uint OWNER_SECURITY_INFORMATION = 0x00000001;
+        public const uint IO_REPARSE_TAG_SYMLINK = 0xA000000C;
+        public const uint FSCTL_GET_REPARSE_POINT = 0x000900A8;
 
         public static WindowsStorageInfo GetFileInformation(string absolutePath)
         {
@@ -252,7 +253,7 @@ namespace Rheo.Storage.COM
         /// <returns>A handle to the created or opened file or device. Returns an invalid handle value if the operation fails.</returns>
         // https://learn.microsoft.com/en-us/dotnet/api/microsoft.win32.safehandles.safefilehandle?view=net-9.0
         [LibraryImport("kernel32.dll", EntryPoint = "CreateFileW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
-        private static partial SafeFileHandle CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, nint lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, nint hTemplateFile);
+        public static partial SafeFileHandle CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, nint lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, nint hTemplateFile);
 
         /// <summary>
         /// Retrieves information about the specified file using its handle.
