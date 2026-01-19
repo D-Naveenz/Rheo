@@ -15,7 +15,7 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>definition; extension; types; asynchronous; mime; file-handling; directory-management; magic-numbers; file-analysis; rheo;</PackageTags>
-    <PackageIcon>icon.png</PackageIcon>
+    <PackageIcon>icon-small.png</PackageIcon>
     <RepositoryUrl>https://github.com/D-Naveenz/rheo-storage</RepositoryUrl>
     <PackageProjectUrl>https://github.com/D-Naveenz/rheo-storage/wiki</PackageProjectUrl>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -45,7 +45,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\icon.png">
+    <None Include="..\icon-small.png">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
