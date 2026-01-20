@@ -12,6 +12,8 @@ on:
 jobs:
   build-test-pack-publish:
     runs-on: windows-latest
+    permissions:
+      contents: read
     env:
       NUGET_SOURCE: https://api.nuget.org/v3/index.json
       NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
